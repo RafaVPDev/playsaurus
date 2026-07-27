@@ -5,7 +5,7 @@ rem O painel nao e uma pagina estatica: ele precisa deste servidor para executar
 rem build, screenshots e publicacao. Abrir painel\index.html direto no navegador
 rem nao funciona.
 chcp 65001 >nul
-title Documentacao - Docusaurus + Playwright
+title Playsaurus - Docusaurus + Playwright
 cd /d "%~dp0"
 
 where node >nul 2>nul

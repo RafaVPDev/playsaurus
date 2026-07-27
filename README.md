@@ -1,8 +1,8 @@
-# Documentação — instalação compartilhada
+# Playsaurus — instalação compartilhada de documentação
 
 Uma instalação do Docusaurus + Playwright que gera a documentação de **vários
-produtos**. Cada produto tem só o que é dele (artigos, marca, screenshots) em
-`projetos/<id>/`; o resto — dependências, tema base, scripts — é comum.
+produtos**. Cada produto tem só o que é dele (artigos, marca, screenshots, vídeos)
+em `projetos/<id>/`; o resto — dependências, tema base, scripts — é comum.
 
 O motivo é direto: cada projeto com documentação própria carregaria seu próprio
 `node_modules` de ~700 MB. Aqui é um só.
@@ -46,7 +46,7 @@ id pode ser omitido.
 ## Estrutura
 
 ```
-compartilhado/     tema base, componentes, BasePage do Playwright, projeto.cjs
+compartilhado/     tema base, componentes, BasePage e overlays de vídeo (cursor + legenda), projeto.cjs
 projetos/<id>/     artigos, marca, screenshots, specs, projeto.json
 scripts/           build, publicação, índice da Ajuda, painel
 painel/            a página do painel
