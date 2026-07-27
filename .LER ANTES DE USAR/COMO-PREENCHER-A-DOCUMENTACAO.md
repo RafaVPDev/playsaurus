@@ -61,8 +61,12 @@ imagens e, em arquivos .mdx, componentes e diagramas Mermaid.
   relacionados, data da última revisão. Diagramas Mermaid ajudam nos fluxos.
 - **Usabilidade** (tutorial): o que será feito, quem pode fazer, pré-requisitos,
   passo a passo numerado, resultado esperado, observações, problemas comuns,
-  próximos passos. Linguagem simples; sem citar nomes internos de código.
-- **Referência**: glossário; matriz de permissões (papel × ação); FAQ.
+  próximos passos. Linguagem simples e voltada à tarefa; sem código, caminhos de
+  arquivos, nomes de tabelas, componentes, rotas internas ou detalhes de
+  implementação.
+- **Referência** (consulta funcional): glossário; matriz de permissões
+  (perfil × ação); FAQ. Deve explicar as regras do produto de forma objetiva,
+  sem virar uma segunda seção de Arquitetura.
 
 ### Formato do FAQ (referencia/perguntas-frequentes.md)
 Categorias em `##`, perguntas em `###`. No frontmatter, `faq_admin` lista as
@@ -100,9 +104,16 @@ npm run publish -- <id>     # copia o build para o public/docs do produto
 ```
 
 ### A regra de ouro
-Confira **cada afirmação contra o código**. Documentação bem escrita que descreve
-algo que não existe é o erro mais comum (e mais difícil de perceber). Ao inferir
-algo, deixe explícito.
+Confira **cada afirmação contra o código**, mas adapte a apresentação ao público.
+Documentação bem escrita que descreve algo que não existe é o erro mais comum
+(e mais difícil de perceber).
+
+- Na **Arquitetura** e nos relatórios internos, registre arquivos de origem,
+  fatos confirmados, inferências e lacunas.
+- Na **Usabilidade** e na **Referência**, use o código apenas para validar o
+  conteúdo. Não publique caminhos de arquivos, blocos de auditoria, evidências
+  técnicas, inferências ou lacunas. Quando algo não estiver confirmado, omita a
+  informação e registre a pendência somente no relatório interno.
 
 ---
 
@@ -120,8 +131,15 @@ português do Brasil.
 
 Regras invioláveis:
 - NÃO altere o código do produto.
-- Toda afirmação técnica relevante deve citar o arquivo de origem.
-- Separe claramente: fato confirmado no código, inferência e lacuna.
+- Use o código como fonte de verdade e não invente comportamentos.
+- Em Arquitetura e relatórios internos, cite os arquivos de origem e separe
+  claramente fatos confirmados, inferências e lacunas.
+- Em Usabilidade e Referência, NÃO mostre caminhos de arquivos, nomes internos,
+  trechos de código, fontes técnicas, blocos de "fato confirmado", "inferência"
+  ou "lacuna". Se algo não estiver confirmado, omita e registre a pendência
+  somente no relatório interno.
+- Respeite o público de cada seção: Arquitetura é técnica; Usabilidade ensina
+  tarefas ao usuário final; Referência serve para consulta funcional rápida.
 - Não exponha segredos, tokens, senhas, URLs privadas ou dados pessoais.
 - Cada arquivo .md/.mdx usa frontmatter com sidebar_position (ordem no menu).
 ```
@@ -169,35 +187,121 @@ críticos, sincronização de integrações). Ao terminar, rode: npm run build -
 Escreva a seção Usabilidade em projetos/<id>/docs/usabilidade/, orientada a
 tarefas, para usuários não técnicos. Baseie-se nas rotas, telas, labels, botões,
 validações e permissões REAIS do produto. Documente só o que existe no código.
+O código é apenas fonte de verificação e não deve aparecer no texto publicado.
 
 Organize um artigo por tarefa (ajuste ao produto): primeiros passos; login e
 acesso; navegação; [uma página por tela/funcionalidade principal];
-configurações; perguntas frequentes; solução de problemas.
+configurações; solução de problemas.
 
 Cada tutorial deve conter: 1) o que será feito; 2) quem pode fazer;
 3) pré-requisitos; 4) passo a passo numerado; 5) resultado esperado;
 6) observações e alertas; 7) problemas comuns; 8) próximos passos.
 
-- Linguagem simples e direta. Não cite nomes internos de tabelas/componentes.
+- Escreva como um guia de uso para alguém que conhece o trabalho, mas não
+  conhece o código nem a arquitetura do sistema.
+- Use os nomes visíveis na interface para menus, campos, botões, status e
+  perfis. Explique termos inevitáveis na primeira vez em que aparecerem.
+- Prefira instruções como "No menu lateral, acesse..." e "Selecione..." em vez
+  de descrever rotas, requisições, tabelas, funções ou processamento interno.
+- Explique o que o usuário precisa fazer, o que acontece na tela e qual será o
+  resultado. Só mencione detalhes técnicos quando forem indispensáveis para a
+  pessoa concluir a tarefa.
+- NÃO inclua caminhos como `src/...`, nomes de componentes, hooks, tabelas,
+  migrations, APIs, endpoints, payloads, variáveis de ambiente ou trechos de
+  código.
+- NÃO crie seções ou observações chamadas "Fato confirmado no código", "Fonte",
+  "Evidência", "Inferência", "Lacuna", "Implementação" ou equivalentes.
+- Não descreva como o sistema foi implementado. Converta validações técnicas em
+  mensagens úteis, por exemplo: o que preencher, qual formato usar e como
+  corrigir um erro exibido.
+- Não repita FAQ, glossário ou matriz de permissões completos nesta seção.
+  Quando necessário, crie apenas um link para a página correspondente em
+  Referência.
 - Não invente ações ou botões que não existem.
 - Marque com comentário MDX {/* screenshot: <tela> */} onde entra imagem.
 - No frontmatter, use `publico: admin` ou `publico: todos` para indicar quem
   enxerga o artigo (usado pela busca/filtragem por perfil, quando o produto
   tiver tela de ajuda).
+
+Antes de finalizar, releia cada página com este teste: "Uma pessoa cliente,
+sem acesso ao repositório, entende este conteúdo e consegue executar a tarefa?"
+Se algum trecho só for útil para desenvolvedores, mova-o para Arquitetura ou
+remova-o. Não deixe observações técnicas no final dos artigos.
 ```
 
 ### Prompt 4 — Referência (glossário, permissões, FAQ)
 ```
-Crie a seção Referência em projetos/<id>/docs/referencia/:
+Crie a seção Referência em projetos/<id>/docs/referencia/ como material de
+consulta funcional para usuários e administradores, não como documentação
+técnica. Consulte o código para confirmar as regras, mas não exponha a
+investigação técnica no conteúdo publicado.
 
-- glossario.md: termos funcionais e técnicos do produto.
-- permissoes.md: matriz de papéis × ações, DERIVADA do controle de acesso real
-  do código (não de suposição por nome de papel).
+- glossario.md: termos que aparecem na interface, nos processos e na
+  documentação. Definições curtas, em linguagem simples, explicando o significado
+  para quem usa o produto. Inclua um termo técnico somente se ele estiver
+  visível ao usuário ou for indispensável para usar/administrar o sistema.
+- permissoes.md: matriz de perfis × ações, DERIVADA do controle de acesso real
+  do código (não de suposição pelo nome do perfil). Use os nomes exibidos no
+  produto e respostas objetivas como "Pode", "Não pode" e "Somente quando...".
+  Explique exceções pelo efeito prático para o usuário, sem descrever políticas,
+  claims, tabelas, funções ou verificações internas.
 - perguntas-frequentes.md: FAQ no formato — categorias em "##", perguntas em
   "###". No frontmatter, liste em `faq_admin` as categorias visíveis só para
-  administradores.
+  administradores. Responda primeiro de forma direta e, quando necessário,
+  inclua poucos passos práticos ou um link para o tutorial de Usabilidade.
 
 Só inclua perguntas cujas respostas você confirma no comportamento atual.
+
+Regras de linguagem:
+- NÃO inclua caminhos de arquivos, nomes de componentes, tabelas, migrations,
+  APIs, endpoints, funções, variáveis de ambiente ou trechos de código.
+- NÃO inclua blocos de auditoria, fontes técnicas, "fato confirmado",
+  "inferência", "lacuna" ou explicações sobre como a conclusão foi obtida.
+- Não transforme o glossário em dicionário de tecnologias nem o FAQ em guia de
+  troubleshooting para desenvolvedores.
+- Quando uma regra não estiver confirmada, não publique uma suposição. Registre
+  a pendência apenas no relatório interno de cobertura.
+
+Antes de finalizar, confirme que cada item responde a uma dúvida de uso,
+permissão ou significado. Conteúdo sobre estrutura, infraestrutura, segurança
+interna ou implementação pertence à seção Arquitetura.
+```
+
+### Prompt 4A — Simplificar Usabilidade e Referência já existentes
+```
+Revise todo o conteúdo já existente em:
+- projetos/<id>/docs/usabilidade/
+- projetos/<id>/docs/referencia/
+
+Objetivo: deixar essas duas seções adequadas para clientes, usuários finais e
+administradores que não têm acesso ao código.
+
+Na Usabilidade:
+- preserve tarefas, passos, nomes visíveis na interface, regras funcionais,
+  alertas, problemas comuns, screenshots e links úteis;
+- reescreva explicações técnicas como orientações práticas;
+- remova caminhos de arquivos, rotas internas, nomes de componentes, hooks,
+  tabelas, migrations, APIs, endpoints, funções, payloads, variáveis de ambiente,
+  trechos de código e detalhes de implementação;
+- remova blocos ou frases de "Fato confirmado no código", "Fonte", "Evidência",
+  "Inferência", "Lacuna", "Implementação" e equivalentes;
+- não acrescente um resumo técnico no fim dos artigos.
+
+Na Referência:
+- mantenha apenas termos úteis para quem usa o produto, regras de permissão e
+  dúvidas frequentes;
+- transforme a matriz de permissões em linguagem funcional, usando os nomes de
+  perfis e ações exibidos no sistema;
+- responda o FAQ de forma direta, com passos curtos ou links para Usabilidade;
+- remova tecnologias, estrutura interna e explicações de engenharia que
+  pertençam à Arquitetura.
+
+Não altere Arquitetura, código do produto, screenshots, links válidos,
+frontmatter ou regras funcionais confirmadas. Se algum conteúdo técnico removido
+for importante para desenvolvedores e ainda não existir em Arquitetura, apenas
+liste a sugestão no relatório interno; não o mova automaticamente.
+
+Ao final, informe quais arquivos foram alterados e rode: npm run build -- <id>
 ```
 
 ### Prompt 5 — Adaptar os screenshots (o Playwright nasceu como modelo)
@@ -226,11 +330,25 @@ NÃO existem no código; nomes antigos do produto; termos sem entrada no glossá
 exposição de dados sensíveis; diagramas Mermaid inválidos; tema escuro;
 responsividade; build do Docusaurus.
 
-Crie projetos/<id>/docs/referencia/relatorio-de-cobertura.md com uma matriz:
+Valide também a adequação de linguagem:
+- Usabilidade deve ser orientada a tarefas e não pode conter caminhos de
+  arquivos, nomes de tabelas/componentes, APIs, endpoints, trechos de código,
+  blocos de evidência, fatos confirmados, inferências ou lacunas.
+- Referência deve ser uma consulta funcional objetiva e não pode repetir
+  conteúdo técnico da Arquitetura.
+- Qualquer evidência técnica ou pendência encontrada deve ficar somente no
+  relatório interno, nunca acrescentada às páginas de Usabilidade ou Referência.
+
+Crie `.Relatorios de cobertura/<id>/relatorio-de-cobertura.md` com uma matriz:
 módulo do produto | página de arquitetura | tutorial de usabilidade |
 screenshots disponíveis | status (completo/parcial/pendente) | motivo da pendência.
 
-Corrija só problemas dentro de projetos/<id>/. Ao final: npm run build -- <id>
+O relatório é interno: não crie links para ele dentro de `projetos/<id>/docs/`
+e não o inclua na sidebar ou no build público.
+
+Corrija os problemas encontrados somente na documentação, no tema e nas
+automações do projeto dentro do Playsaurus. Não altere o código do produto.
+Ao final: npm run build -- <id>
 ```
 
 ### Prompt EXTRA — Atualizar a doc quando entra uma funcionalidade nova
@@ -242,18 +360,24 @@ aponte os arquivos/PR>.
    afetado (cruzando com projetos/<id>/docs/).
 2. Atualize o que for necessário, mantendo o padrão de cada seção:
    - Arquitetura: página do módulo afetado (fluxo, regras, segurança, diagrama).
-   - Usabilidade: tutorial da tarefa (passos, telas, resultado esperado).
-   - Referência: matriz de permissões e glossário, se mudaram.
+   - Usabilidade: tutorial da tarefa em linguagem de usuário (passos, telas,
+     resultado esperado), sem evidências ou detalhes técnicos.
+   - Referência: matriz de permissões, glossário e FAQ, se mudaram, sempre em
+     linguagem funcional e objetiva.
 3. Se telas mudaram, ajuste/adicione o spec em projetos/<id>/playwright/ e
    regenere as imagens afetadas: npm run screenshots -- <id>
 4. Atualize a "data da última revisão" das páginas mexidas.
 
-Regras: cite os arquivos de origem; não invente; não altere o produto; não
-exponha dados sensíveis. Ao final: npm run build -- <id>
+Regras: cite os arquivos de origem somente na Arquitetura ou em relatórios
+internos; não invente; não altere o produto; não exponha dados sensíveis. Em
+Usabilidade e Referência, não publique caminhos, código, fontes, evidências,
+inferências ou lacunas. Ao final: npm run build -- <id>
 ```
 
 ---
 
-Ordem recomendada: **1 → 2 → 3 → 4 → 5 → 6**. Fazer o inventário técnico (1)
-antes de escrever reduz muito o risco de uma documentação bonita, porém diferente
-do funcionamento real do produto.
+Ordem recomendada para uma documentação nova: **1 → 2 → 3 → 4 → 5 → 6**.
+Em uma documentação já preenchida, use o **4A** sempre que Usabilidade ou
+Referência estiverem técnicas demais. Fazer o inventário técnico (1) antes de
+escrever reduz muito o risco de uma documentação bonita, porém diferente do
+funcionamento real do produto.
