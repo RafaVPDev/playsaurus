@@ -1,7 +1,7 @@
 /**
  * Serve o build já gerado, do jeito que o servidor estático vai servir.
  *
- * Uso: npm run serve -- oktask
+ * Uso: npm run serve -- meu-projeto
  *
  * Vale mais que o `start` para conferir a publicação: é aqui que aparecem os
  * problemas de barra final e de baseUrl, que o modo de desenvolvimento esconde.

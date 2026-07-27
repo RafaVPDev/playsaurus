@@ -1,7 +1,7 @@
 /**
  * Grava os vídeos de jornada de um produto.
  *
- * Uso: npm run videos -- oktask
+ * Uso: npm run videos -- meu-projeto
  *
  * Percorre os specs *.jornada.spec.ts com a config de vídeo (playwright.video.config.ts)
  * e salva o resultado em projetos/<id>/static/videos/.

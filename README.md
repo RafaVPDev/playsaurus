@@ -1,7 +1,7 @@
 # Playsaurus — instalação compartilhada de documentação
 
 Uma instalação do Docusaurus + Playwright que gera a documentação de **vários
-produtos**. Cada produto tem só o que é dele (artigos, marca, screenshots, vídeos)
+projetos**. Cada projeto tem só o que é dele (artigos, marca, screenshots, vídeos)
 em `projetos/<id>/`; o resto — dependências, tema base, scripts — é comum.
 
 O motivo é direto: cada projeto com documentação própria carregaria seu próprio
@@ -17,7 +17,7 @@ npm run painel
 ```
 
 O painel abre em `http://127.0.0.1:4321` e é por onde se faz tudo: escolher o
-produto, informar **onde fica o repositório dele nesta máquina** e disparar
+projeto, informar **onde fica o repositório dele nesta máquina** e disparar
 screenshots, build e publicação com o log ao vivo.
 
 > O painel **não** é uma página estática: abrir `painel/index.html` direto no
@@ -36,12 +36,12 @@ id pode ser omitido.
 | Comando | O que faz |
 |---|---|
 | `npm run painel` | Abre o painel (recomendado) |
-| `npm run start -- oktask` | Servidor de desenvolvimento, com recarga |
-| `npm run build -- oktask` | Gera o site em `build/oktask` |
-| `npm run serve -- oktask` | Serve o build como um servidor estático serviria |
-| `npm run screenshots -- oktask` | Captura as telas do produto (precisa do app rodando) |
-| `npm run videos -- oktask` | Grava o vídeo-tutorial de jornada em `static/videos/` (precisa do app rodando) |
-| `npm run publish -- oktask` | Build + cópia para o repositório do produto + índice da Ajuda |
+| `npm run start -- meu-projeto` | Servidor de desenvolvimento, com recarga |
+| `npm run build -- meu-projeto` | Gera o site em `build/meu-projeto` |
+| `npm run serve -- meu-projeto` | Serve o build como um servidor estático serviria |
+| `npm run screenshots -- meu-projeto` | Captura as telas do projeto (precisa do app rodando) |
+| `npm run videos -- meu-projeto` | Grava o vídeo-tutorial de jornada em `static/videos/` (precisa do app rodando) |
+| `npm run publish -- meu-projeto` | Build + cópia para o repositório do projeto + índice da Ajuda |
 
 ## Estrutura
 
@@ -58,25 +58,25 @@ captura, os scripts e os padrões editoriais.
 
 **Por projeto:** os artigos, a marca e as cores, a `baseUrl`, as credenciais e —
 o que costuma surpreender — os **specs de screenshot**, porque rotas e seletores
-são de cada produto.
+são de cada projeto.
 
-> Resista a subir para `compartilhado/` algo que só serve a um produto. Os specs
+> Resista a subir para `compartilhado/` algo que só serve a um projeto. Os specs
 > de screenshot são o caso mais tentador e o mais errado.
 
 ## Como o caminho do repositório é resolvido
 
 Nesta ordem, o primeiro que existir vence:
 
-1. a variável de ambiente declarada no `projeto.json` (ex.: `OKTASK_REPO`);
+1. a variável de ambiente declarada no `projeto.json` (ex.: `MEUPROJETO_REPO`);
 2. `caminhos.local.json` — escrito pelo painel, específico da máquina;
 3. o caminho relativo do `projeto.json` — o padrão versionado.
 
 Se nenhum resolver, os comandos param com uma mensagem dizendo o que fazer, em
 vez de publicar em algum lugar errado.
 
-## Adicionar um produto
+## Adicionar um projeto
 
-No painel, botão **+ Novo produto**. Ele lista os repositórios que encontrar na
+No painel, botão **+ Novo projeto**. Ele lista os repositórios que encontrar na
 sua pasta de projetos — basta clicar no que quer documentar, conferir o nome e
 escolher uma cor.
 
@@ -93,34 +93,34 @@ O que é criado em `projetos/<id>/`:
 | `playwright/` | **modelo** de captura — precisa de ajuste, ver abaixo |
 | `.env.example` | credenciais da conta de demonstração |
 
-Feito isso o produto já aparece no painel e o **Gerar build** funciona. A partir
+Feito isso o projeto já aparece no painel e o **Gerar build** funciona. A partir
 daí é escrever os artigos em `docs/`.
 
 > Os arquivos em `playwright/` nascem como modelo: os seletores do `LoginPage` e
-> as rotas do spec são chutes razoáveis, não os do seu produto. Ajuste antes de
+> as rotas do spec são chutes razoáveis, não os do seu projeto. Ajuste antes de
 > rodar os screenshots — é por isso que rotas e seletores não são compartilhados.
 
 O índice da Central de Ajuda nasce desligado (`indiceAjuda.gerar: false`): ele só
-faz sentido se o app do produto tiver uma tela que consuma o `help-index.json`.
+faz sentido se o app do projeto tiver uma tela que consuma o `help-index.json`.
 
 O `projeto.json` é validado no carregamento: campo faltando, `baseUrl` sem barra
 final ou seção sem pasta correspondente falham na hora, com o motivo.
 
-## Excluir um produto
+## Excluir um projeto
 
-No cartão do produto, **Excluir este produto** (com confirmação em dois passos).
-Isso apaga `projetos/<id>/` e o build gerado — serve para recriar um produto que
-ficou com defeito. **O repositório do produto e o `public/docs` publicado não são
+No cartão do projeto, **Excluir este projeto** (com confirmação em dois passos).
+Isso apaga `projetos/<id>/` e o build gerado — serve para recriar um projeto que
+ficou com defeito. **O repositório do projeto e o `public/docs` publicado não são
 tocados.**
 
 ## O que é versionado
 
 O conteúdo de `projetos/` **não** vai para o git: é individual de cada máquina.
-Quem clonar a instalação sobe a pasta vazia e cria os próprios produtos pelo
-painel — o Oktask inclusive. O que se compartilha é a ferramenta (`compartilhado/`,
+Quem clonar a instalação sobe a pasta vazia e cria os próprios projetos pelo
+painel. O que se compartilha é a ferramenta (`compartilhado/`,
 `scripts/`, `painel/`), não a documentação de cada um.
 
-> Consequência: a fonte da documentação de cada produto vive só na máquina de
+> Consequência: a fonte da documentação de cada projeto vive só na máquina de
 > quem a mantém e no build publicado em `public/docs`. Faça backup do que
 > escrever — aqui o git não segura por você.
 
@@ -132,23 +132,23 @@ Estas falhas não geram mensagem de erro — tudo aparenta funcionar:
 |---|---|---|
 | **Status 200 enganoso** | Toda rota responde 200 porque o SPA devolve o `index.html` do app | Validar por **conteúdo** (título) e por arquivo com extensão (`/docs/sitemap.xml`) |
 | **Barra final ausente** | `/docs/secao/artigo` cai no 404 do app; `/docs/secao/artigo/` funciona | `trailingSlash: true` e todos os links construídos com barra |
-| **Servidor de desenvolvimento do produto** | `/docs` não abre no `npm run dev` do app | Testar com o build do produto, ou com `npm run serve -- <id>` aqui |
-| **Publicação não propagada** | O commit existe, mas o site não mudou | Conferir o *Publish* no Lovable antes de investigar o código |
+| **Servidor de desenvolvimento do app** | `/docs` não abre no `npm run dev` do app | Testar com o build do projeto, ou com `npm run serve -- <id>` aqui |
+| **Publicação não propagada** | O commit existe, mas o site não mudou | Conferir a publicação na plataforma de hospedagem antes de investigar o código |
 | **Links relativos a diretórios** | Com `trailingSlash`, links como `../secao/` resolvem errado | Apontar para o arquivo: `../secao/index.mdx` |
 | **Índice da Ajuda desatualizado** | A Central de Ajuda mostra conteúdo antigo | Ele é gerado no `publish`; rode o comando completo |
 
 ## Publicação: manual, por opção
 
 Não há automação. `npm run publish -- <id>` copia o build para o `public/docs`
-do produto; depois é preciso **commitar essa pasta** no repositório do produto e
-publicar pelo Lovable.
+do projeto; depois é preciso **commitar essa pasta** no repositório do projeto e
+publicar pela plataforma de hospedagem.
 
 Automações por GitHub Actions chegaram a existir e foram removidas
-deliberadamente: cada publicação gerava um commit e o Lovable ressincronizava,
+deliberadamente: cada publicação gerava um commit e a plataforma ressincronizava,
 somando ruído a um repositório que já carrega o build da documentação. A decisão
 foi trocar automação por controle.
 
-> Não acople o build da documentação ao build do produto: as dependências do
+> Não acople o build da documentação ao build da aplicação: as dependências do
 > Docusaurus são pesadas e uma falha na documentação passaria a interromper o
 > deploy da aplicação.
 
@@ -156,5 +156,5 @@ foi trocar automação por controle.
 
 Com a instalação compartilhada, um erro em `compartilhado/css/base.css`, no
 `BasePage` ou numa atualização de dependência passa a afetar **todos** os
-produtos de uma vez. Com um produto só isso não custa nada; a partir do segundo,
+projetos de uma vez. Com um projeto só isso não custa nada; a partir do segundo,
 vale testar o build de cada um antes de commitar mudanças em `compartilhado/`.

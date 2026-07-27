@@ -4,6 +4,9 @@
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
 <title>Playsaurus — Docusaurus + Playwright</title>
+<link rel="icon" type="image/svg+xml" href="/painel/favicon.svg" />
+<link rel="alternate icon" href="/painel/favicon_io/favicon.ico" sizes="any" />
+<link rel="apple-touch-icon" href="/painel/favicon_io/apple-touch-icon.png" />
 <style>
   /* Paleta e tipografia emprestadas do find-the-bug: quase-preto, acento
      verde-limão e tudo monoespaçado. Tema escuro fixo, como no original —
@@ -254,6 +257,18 @@
     border-top: 1px solid var(--border);
   }
   .excluir-aviso { color: var(--muted); font-size: .82rem; margin-right: auto; }
+  .preview-linha {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: .5rem;
+    margin-top: .9rem;
+    font-size: .85rem;
+  }
+  .preview-rotulo { color: var(--muted); }
+  .preview-linha a { color: var(--accent); word-break: break-all; text-decoration: none; }
+  .preview-linha a:hover { text-decoration: underline; }
+  .preview-linha .discreto { margin-left: auto; }
   .perigo-link {
     background: transparent;
     border-color: transparent;
@@ -275,15 +290,15 @@
 <div class="container">
   <header>
     <h1>Playsaurus</h1>
-    <p class="tagline">Docusaurus + Playwright — uma instalação, vários produtos</p>
+    <p class="tagline">Docusaurus + Playwright — uma instalação, vários projetos</p>
     <p id="subtitulo">
       Instalada em <code id="raiz">…</code> —
-      escolha o produto, confira onde fica o repositório dele nesta máquina e gere a documentação.
+      escolha o projeto, confira onde fica o repositório dele nesta máquina e gere a documentação.
     </p>
   </header>
 
   <div class="seletor" id="seletor" hidden>
-    <label for="comboProjeto">Produto</label>
+    <label for="comboProjeto">Projeto</label>
     <select id="comboProjeto"></select>
   </div>
 
@@ -291,9 +306,9 @@
 
   <section id="novo" hidden>
     <div class="card">
-      <h2 class="card__nome">Novo produto</h2>
+      <h2 class="card__nome">Novo projeto</h2>
       <p class="card__sub">
-        Escolha o repositório do produto. O painel cria a documentação já pronta
+        Escolha o repositório do projeto. O painel cria a documentação já pronta
         para compilar: as seções padrão, um tema a partir da cor escolhida e um
         modelo de captura de screenshots.
       </p>
@@ -315,14 +330,14 @@
             <p class="dica">Vira o nome da pasta e o argumento dos comandos.</p>
           </div>
           <div class="campo">
-            <label for="campoNome">Nome do produto</label>
+            <label for="campoNome">Nome do projeto</label>
             <input type="text" id="campoNome" />
             <p class="dica">Aparece no título e na navegação do portal.</p>
           </div>
           <div class="campo">
             <label for="campoUrl">Endereço do app</label>
-            <input type="text" id="campoUrl" spellcheck="false" placeholder="https://meuproduto.com" />
-            <p class="dica">Onde o produto fica no ar. Serve para montar o sitemap.</p>
+            <input type="text" id="campoUrl" spellcheck="false" placeholder="https://meuprojeto.com" />
+            <p class="dica">Onde o projeto fica no ar. Serve para montar o sitemap.</p>
           </div>
           <div class="campo">
             <label for="campoBaseUrl">Caminho da documentação</label>
@@ -337,7 +352,7 @@
         </div>
 
         <div class="acoes">
-          <button class="primario" id="btnCriar">Criar produto</button>
+          <button class="primario" id="btnCriar">Criar projeto</button>
           <button class="discreto" id="btnCancelar">Cancelar</button>
         </div>
       </div>
@@ -370,6 +385,7 @@ const el = (tag, props = {}, filhos = []) => {
 };
 
 let rodando = false;
+let previewAtivo = null; // { id, url } da pré-visualização no ar, ou null
 
 const ORIGENS = {
   env: (d) => ['selo--ok', `variável ${d}`],
@@ -382,7 +398,8 @@ async function carregar() {
   try {
     const r = await fetch('/api/projetos');
     if (!r.ok) throw new Error(`o servidor respondeu ${r.status}`);
-    const { projetos, raiz, pastaBase } = await r.json();
+    const { projetos, raiz, pastaBase, preview } = await r.json();
+    previewAtivo = preview ?? null;
     $('#raiz').textContent = raiz;
     if (pastaBase && !$('#pastaBase').value) $('#pastaBase').value = pastaBase;
     desenhar(projetos);
@@ -452,7 +469,7 @@ function desenhar(projetos) {
       textContent: p.erro ? `${p.id} — projeto.json inválido` : p.nome,
     }));
   }
-  combo.append(el('option', { value: NOVO, textContent: '+ Novo produto…' }));
+  combo.append(el('option', { value: NOVO, textContent: '+ Novo projeto…' }));
   combo.value = selecionado;
   $('#seletor').hidden = false;
 
@@ -478,7 +495,7 @@ function mostrarSelecionado() {
       ? cartaoDoProjeto(p)
       : el('p', {
           className: 'vazio',
-          textContent: 'Nenhum produto ainda — escolha "+ Novo produto" para criar o primeiro.',
+          textContent: 'Nenhum projeto ainda — escolha "+ Novo projeto" para criar o primeiro.',
         }),
   );
   if (rodando) travarBotoes(true);
@@ -542,7 +559,7 @@ function cartaoDoProjeto(p) {
 
     card.append(
       el('div', { className: 'campo' }, [
-        el('label', { textContent: `Repositório do produto (a doc vai para ${p.destino})` }),
+        el('label', { textContent: `Repositório do projeto (a doc vai para ${p.destino})` }),
         entrada,
         el('span', { className: `selo ${classeSelo}`, textContent: textoSelo }),
         salvar,
@@ -575,6 +592,7 @@ function cartaoDoProjeto(p) {
     const botoes = [
       ['screenshots', 'Gerar screenshots', false, !p.temEnv],
       ['build', 'Gerar build', false, false],
+      ['visualizar', 'Visualizar', false, !p.temBuild],
       ['publicar', 'Publicar no repositório', true, !p.existe],
     ];
     for (const [acao, rotulo, primario, bloqueado] of botoes) {
@@ -585,10 +603,15 @@ function cartaoDoProjeto(p) {
       });
       b.dataset.acao = 'sim';
       b.dataset.bloqueado = bloqueado ? 'sim' : 'nao';
-      b.onclick = () => executar(acao, p.id, `${rotulo} — ${p.nome}`);
+      // "Visualizar" sobe um servidor persistente (não é ação one-shot por SSE).
+      b.onclick = acao === 'visualizar'
+        ? () => visualizar(p.id)
+        : () => executar(acao, p.id, `${rotulo} — ${p.nome}`);
+      if (acao === 'visualizar' && !p.temBuild) b.title = 'Gere o build antes de visualizar.';
       acoes.append(b);
     }
     card.append(acoes);
+    if (previewAtivo && previewAtivo.id === p.id) card.append(linhaPreview(previewAtivo.url));
     card.append(rodapeExcluir(p));
     return card;
   }
@@ -601,12 +624,12 @@ function cartaoDoProjeto(p) {
 function rodapeExcluir(p) {
   const linha = el('div', { className: 'excluir-linha' });
 
-  const abrir = el('button', { className: 'perigo-link', textContent: 'Excluir este produto' });
+  const abrir = el('button', { className: 'perigo-link', textContent: 'Excluir este projeto' });
   const montarConfirmacao = () => {
     linha.replaceChildren(
       el('span', {
         className: 'excluir-aviso',
-        textContent: `Apagar projetos/${p.id}/ e o build? O repositório do produto não é tocado.`,
+        textContent: `Apagar projetos/${p.id}/ e o build? O repositório do projeto não é tocado.`,
       }),
       (() => {
         const sim = el('button', { className: 'perigo', textContent: 'Excluir' });
@@ -690,6 +713,58 @@ function executar(acao, id, titulo) {
     rodando = false;
     carregar();
   };
+}
+
+/**
+ * Sobe a pré-visualização da doc buildada e abre numa aba. Diferente das ações
+ * one-shot, aqui o backend deixa um `docusaurus serve` no ar e devolve a URL.
+ */
+async function visualizar(id) {
+  // Abre a aba já no clique (gesto do usuário) para escapar do bloqueador de
+  // pop-up; a URL entra depois que o servidor sobe.
+  const aba = window.open('', '_blank');
+  try {
+    const r = await fetch('/api/visualizar', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ id }),
+    });
+    const dados = await r.json();
+    if (dados.erro) throw new Error(dados.erro);
+    if (aba) aba.location = dados.url;
+    carregar(); // reflete "pré-visualização no ar" no card
+  } catch (e) {
+    if (aba) aba.close();
+    $('#log').classList.add('visivel');
+    $('#logTitulo').textContent = 'Visualizar';
+    $('#logTexto').textContent = e.message;
+    $('#girando').hidden = true;
+    const selo = $('#logSelo');
+    selo.hidden = false;
+    selo.textContent = 'falhou';
+    selo.className = 'selo selo--erro';
+  }
+}
+
+/** Linha "pré-visualização no ar" com o link e o botão de parar. */
+function linhaPreview(urlPreview) {
+  const linha = el('div', { className: 'preview-linha' });
+  linha.append(
+    el('span', { className: 'preview-rotulo', textContent: 'Pré-visualização no ar: ' }),
+    el('a', { href: urlPreview, target: '_blank', rel: 'noopener', textContent: urlPreview }),
+  );
+  const parar = el('button', { className: 'discreto', textContent: 'Parar' });
+  parar.onclick = async () => {
+    parar.disabled = true;
+    try {
+      await fetch('/api/visualizar/parar', { method: 'POST' });
+    } catch {
+      // Parar é conveniência: se falhar, o próximo carregar() reconcilia o estado.
+    }
+    carregar();
+  };
+  linha.append(parar);
+  return linha;
 }
 
 // "Limpar" some com o bloco inteiro. Antes esvaziava só o texto e deixava o
@@ -834,7 +909,7 @@ $('#btnCriar').onclick = async () => {
     desenhar(dados.projetos);
 
     $('#log').classList.add('visivel');
-    $('#logTitulo').textContent = `Produto "${dados.criado}" criado`;
+    $('#logTitulo').textContent = `Projeto "${dados.criado}" criado`;
     $('#logSelo').hidden = false;
     $('#logSelo').textContent = 'concluído';
     $('#logSelo').className = 'selo selo--ok';

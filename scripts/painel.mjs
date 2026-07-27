@@ -15,6 +15,7 @@
  * lista fechada — nada vindo da requisição vira comando.
  */
 import { createServer } from 'node:http';
+import net from 'node:net';
 import { spawn } from 'node:child_process';
 import { readFile, stat } from 'node:fs/promises';
 import { existsSync } from 'node:fs';
@@ -52,6 +53,82 @@ const ACOES = {
 };
 
 let emExecucao = null;
+
+// --------------------------------------------------------------- pré-visualização
+//
+// Diferente das ações one-shot (screenshots/build/publicar), a pré-visualização
+// sobe um `docusaurus serve` que fica no ar. Por isso vive fora do fluxo de SSE
+// e do guard `emExecucao`: um servidor persistente, um por vez.
+
+let preview = null; // { proc, id, port, url }
+
+/** Descobre uma porta livre pedindo a porta 0 ao SO e devolvendo a que ele deu. */
+function portaLivre() {
+  return new Promise((resolve, reject) => {
+    const sonda = net.createServer();
+    sonda.on('error', reject);
+    sonda.listen(0, HOST, () => {
+      const { port } = sonda.address();
+      sonda.close(() => resolve(port));
+    });
+  });
+}
+
+/** Espera a porta aceitar conexão — sinal de que o serve está pronto. */
+function esperarPorta(port, timeout = 15000) {
+  return new Promise((resolve, reject) => {
+    const inicio = Date.now();
+    const tentar = () => {
+      const s = net.connect(port, HOST);
+      s.once('connect', () => {
+        s.destroy();
+        resolve();
+      });
+      s.once('error', () => {
+        s.destroy();
+        if (Date.now() - inicio > timeout) reject(new Error('tempo esgotado'));
+        else setTimeout(tentar, 250);
+      });
+    };
+    tentar();
+  });
+}
+
+function pararPreview() {
+  if (preview?.proc && !preview.proc.killed) preview.proc.kill();
+  preview = null;
+}
+
+/** Sobe (ou re-sobe) a pré-visualização de um projeto e devolve a URL. */
+async function iniciarPreview(id) {
+  const projeto = carregarProjeto(id);
+  if (!existsSync(projeto.dirBuild)) {
+    const e = new Error(`Gere o build de ${id} antes de visualizar.`);
+    e.status = 400;
+    throw e;
+  }
+  pararPreview(); // um preview por vez: reclicar ou trocar de projeto encerra o anterior
+
+  const bin = require.resolve('@docusaurus/core/bin/docusaurus.mjs');
+  const port = await portaLivre();
+  const proc = spawn(
+    process.execPath,
+    [bin, 'serve', '--dir', path.relative(RAIZ, projeto.dirBuild), '-p', String(port), '-h', HOST, '--no-open'],
+    { cwd: RAIZ, env: { ...process.env, DOC_PROJETO: id, FORCE_COLOR: '0' } },
+  );
+
+  // `baseUrl` já vem com barra final (validada no carregamento).
+  const atual = { proc, id, port, url: `http://${HOST}:${port}${projeto.baseUrl}` };
+  preview = atual;
+  const limpar = () => {
+    if (preview === atual) preview = null;
+  };
+  proc.on('exit', limpar);
+  proc.on('error', limpar);
+
+  await esperarPorta(port).catch(() => {}); // se demorar, devolve a URL mesmo assim
+  return atual.url;
+}
 
 // ------------------------------------------------------------------ estado
 
@@ -124,6 +201,10 @@ async function lerCorpo(req, limite = 64 * 1024) {
 function executarComStream(res, acao, id) {
   const { script, titulo } = ACOES[acao];
 
+  // Uma pré-visualização do mesmo projeto segura os arquivos de build/<id>; no
+  // Windows o build falharia ao sobrescrevê-los. Encerra o serve antes.
+  if (preview && preview.id === id) pararPreview();
+
   res.writeHead(200, {
     'content-type': 'text/event-stream; charset=utf-8',
     'cache-control': 'no-store',
@@ -184,6 +265,9 @@ const TIPOS = {
   '.css': 'text/css; charset=utf-8',
   '.js': 'text/javascript; charset=utf-8',
   '.svg': 'image/svg+xml',
+  '.png': 'image/png',
+  '.ico': 'image/x-icon',
+  '.webmanifest': 'application/manifest+json',
 };
 
 async function servirEstatico(res, nome) {
@@ -225,6 +309,7 @@ const servidor = createServer(async (req, res) => {
         raiz: RAIZ,
         pastaBase: lerPastaBase(),
         secoesPadrao: SECOES_PADRAO,
+        preview: preview ? { id: preview.id, url: preview.url } : null,
       });
     }
 
@@ -251,17 +336,17 @@ const servidor = createServer(async (req, res) => {
     if (url.pathname === '/api/projetos' && req.method === 'POST') {
       const dados = await lerCorpo(req);
       const { dir, criados } = criarProjeto(dados);
-      console.log(`Produto "${dados.id}" criado em ${path.relative(RAIZ, dir)} (${criados.length} arquivos)`);
+      console.log(`Projeto "${dados.id}" criado em ${path.relative(RAIZ, dir)} (${criados.length} arquivos)`);
       return json(res, { criado: dados.id, arquivos: criados, projetos: estadoDosProjetos() });
     }
 
     if (url.pathname === '/api/excluir' && req.method === 'POST') {
       const { id } = await lerCorpo(req);
       if (!listarProjetos().includes(id)) {
-        return json(res, { erro: `Produto desconhecido: ${id}` }, 400);
+        return json(res, { erro: `Projeto desconhecido: ${id}` }, 400);
       }
       excluirProjeto(id);
-      console.log(`Produto "${id}" excluído.`);
+      console.log(`Projeto "${id}" excluído.`);
       return json(res, { excluido: id, projetos: estadoDosProjetos() });
     }
 
@@ -272,6 +357,24 @@ const servidor = createServer(async (req, res) => {
       }
       salvarCaminhoLocal(id, (caminho ?? '').trim() || null);
       return json(res, { projetos: estadoDosProjetos() });
+    }
+
+    if (url.pathname === '/api/visualizar' && req.method === 'POST') {
+      const { id } = await lerCorpo(req);
+      if (!listarProjetos().includes(id)) {
+        return json(res, { erro: `Projeto desconhecido: ${id}` }, 400);
+      }
+      try {
+        const endereco = await iniciarPreview(id);
+        return json(res, { url: endereco });
+      } catch (e) {
+        return json(res, { erro: e.message }, e.status || 500);
+      }
+    }
+
+    if (url.pathname === '/api/visualizar/parar' && req.method === 'POST') {
+      pararPreview();
+      return json(res, { ok: true });
     }
 
     if (url.pathname === '/api/executar') {
@@ -333,5 +436,14 @@ function ouvir(porta, tentativas = 10) {
   });
   servidor.listen(porta, HOST);
 }
+
+// Não deixa o servidor de pré-visualização órfão quando o painel encerra.
+for (const sinal of ['SIGINT', 'SIGTERM']) {
+  process.on(sinal, () => {
+    pararPreview();
+    process.exit(0);
+  });
+}
+process.on('exit', pararPreview);
 
 ouvir(PORTA_INICIAL);

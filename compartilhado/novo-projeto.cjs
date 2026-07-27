@@ -16,7 +16,7 @@ const {
   salvarCaminhoLocal,
 } = require('./projeto.cjs');
 
-/** Seções padrão — as mesmas do Oktask, para os produtos ficarem com a mesma cara. */
+/** Seções padrão sugeridas, para os projetos ficarem com a mesma cara. */
 const SECOES_PADRAO = [
   {
     id: 'arquitetura',

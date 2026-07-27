@@ -24,7 +24,7 @@ export function idDoArgumento(argv = process.argv.slice(2)) {
   if (disponiveis.length === 1) return disponiveis[0];
 
   console.error(
-    `Informe o projeto. Ex.: npm run build -- oktask\n` +
+    `Informe o projeto. Ex.: npm run build -- meu-projeto\n` +
       `Disponíveis: ${disponiveis.join(', ') || '(nenhum)'}`,
   );
   process.exit(1);

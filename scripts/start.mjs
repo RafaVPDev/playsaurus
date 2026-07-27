@@ -1,7 +1,7 @@
 /**
  * Sobe o servidor de desenvolvimento da documentação de um produto.
  *
- * Uso: npm run start -- oktask
+ * Uso: npm run start -- meu-projeto
  */
 import { BIN, carregarProjeto, executar, idDoArgumento, encerrarComErro } from './comum.mjs';
 

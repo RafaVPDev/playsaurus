@@ -13,7 +13,7 @@
 /caminhos.local.json
 
 # Conteúdo de projetos/ é individual de cada máquina: a pasta sobe, o conteúdo
-# não. Cada pessoa cria os próprios produtos pelo painel (inclusive o Oktask).
+# não. Cada pessoa cria os próprios projetos pelo painel.
 # O .gitkeep mantém a pasta no repositório mesmo vazia.
 /projetos/*
 !/projetos/.gitkeep

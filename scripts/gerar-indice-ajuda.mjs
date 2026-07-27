@@ -8,7 +8,7 @@
  * A aplicação apenas busca esse JSON em tempo de execução — não há acoplamento
  * entre o build da documentação e o build do produto.
  *
- * Uso: npm run indice -- oktask   (também roda dentro do publish)
+ * Uso: npm run indice -- meu-projeto   (também roda dentro do publish)
  */
 import { readFileSync, writeFileSync, readdirSync, existsSync, mkdirSync } from 'node:fs';
 import path from 'node:path';

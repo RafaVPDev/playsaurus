@@ -1,8 +1,8 @@
 /**
  * Captura os screenshots de usabilidade de um produto.
  *
- * Uso: npm run screenshots -- oktask
- *      npm run screenshots -- oktask --ui
+ * Uso: npm run screenshots -- meu-projeto
+ *      npm run screenshots -- meu-projeto --ui
  *
  * Requer o app rodando na URL base do projeto e projetos/<id>/.env preenchido
  * com as credenciais da conta de demonstração.

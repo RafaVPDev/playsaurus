@@ -1,7 +1,7 @@
 /**
  * Publica a documentação dentro do app do produto.
  *
- * Uso: npm run publish -- oktask
+ * Uso: npm run publish -- meu-projeto
  *
  * Faz três coisas, nesta ordem:
  *   1. gera o build em build/<id>;
@@ -67,7 +67,7 @@ try {
   }
 
   console.log(`\nDocumentação publicada em ${path.relative(RAIZ, destino)}`);
-  console.log(`Falta o último passo, manual: publicar o ${projeto.nome} pelo Lovable.`);
+  console.log(`Falta o último passo, manual: publicar o ${projeto.nome} pela plataforma de hospedagem.`);
 } catch (e) {
   encerrarComErro(e);
 }

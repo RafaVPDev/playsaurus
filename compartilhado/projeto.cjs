@@ -1,7 +1,7 @@
 /**
  * Carregamento e validação dos projetos documentados.
  *
- * Este é o único lugar que sabe traduzir um id de projeto ("oktask") em
+ * Este é o único lugar que sabe traduzir um id de projeto (ex.: "meu-projeto") em
  * caminhos concretos. Tudo o mais — config do Docusaurus, config do Playwright,
  * scripts e painel — passa por aqui.
  *

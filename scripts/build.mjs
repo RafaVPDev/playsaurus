@@ -1,7 +1,7 @@
 /**
  * Gera o build da documentação de um produto.
  *
- * Uso: npm run build -- oktask
+ * Uso: npm run build -- meu-projeto
  * Saída: build/<id>/ — uma pasta por produto, sem uma sobrescrever a outra.
  */
 import path from 'node:path';

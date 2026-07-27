@@ -78,7 +78,7 @@
 
 /* Número de colunas fixo pela quantidade de seções (via --cols, definido no
    componente e limitado a 3). Fixo — e não `auto-fit` — para não refluir com a
-   largura da janela: as seções ficam sempre na mesma linha, como no Oktask.
+   largura da janela: as seções ficam sempre na mesma linha.
    Em telas estreitas, empilha. */
 .areasGrid {
   display: grid;
