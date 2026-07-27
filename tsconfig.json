@@ -1,0 +1,11 @@
+// Não é usado por "docusaurus start/build" — serve ao editor (type-checking,
+// autocompletar) e ao script "npm run typecheck".
+{
+  "extends": "@docusaurus/tsconfig",
+  "compilerOptions": {
+    "baseUrl": ".",
+    "ignoreDeprecations": "6.0",
+    "strict": true
+  },
+  "exclude": [".docusaurus", "build", "node_modules"]
+}

@@ -1,0 +1,856 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Documentação — Docusaurus + Playwright</title>
+<style>
+  /* Paleta e tipografia emprestadas do find-the-bug: quase-preto, acento
+     verde-limão e tudo monoespaçado. Tema escuro fixo, como no original —
+     esta é uma ferramenta, não um site. */
+  :root {
+    color-scheme: dark;
+    --bg: #0e0e0f;
+    --surface: #161618;
+    --surface-2: #1e1e21;
+    --border: #1f1f22;
+    --border-forte: #3a3a40;
+    --text: #e8e8ea;
+    /* No original é #6b6b72; clareado porque aqui ele carrega texto pequeno de
+       verdade (subtítulo, rodapé) e 3,65:1 fica abaixo do mínimo legível. */
+    --muted: #8d8d96;
+    --accent: #c8f135;
+    --accent-fraco: rgba(200, 241, 53, 0.06);
+    --accent-borda: rgba(200, 241, 53, 0.22);
+    --sobre-accent: #0e0e0f;
+    --ok: #c8f135;
+    --alerta: #e8b33c;
+    --erro: #f2565c;
+    --log-bg: #0a0a0b;
+    --mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas,
+      'Liberation Mono', 'Courier New', monospace;
+  }
+
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--text);
+    font: 14.5px/1.6 var(--mono);
+    letter-spacing: 0.2px;
+  }
+  .container { max-width: 980px; margin: 0 auto; padding: 2rem 1.25rem 4rem; }
+
+  header h1 { font-size: 1.5rem; font-weight: 600; margin: 0 0 .35rem; letter-spacing: -.2px; }
+  header h1::after { content: '_'; color: var(--accent); }
+  .tagline { margin: 0 0 1rem; color: var(--accent); font-size: .85rem; }
+  header p { margin: 0 0 1.75rem; color: var(--muted); font-size: .88rem; }
+  header code {
+    background: var(--surface-2);
+    border: 1px solid var(--border);
+    padding: .1rem .35rem;
+    border-radius: 6px;
+    font-size: .9em;
+    color: var(--text);
+  }
+
+  .card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 1.25rem 1.35rem;
+    margin-bottom: 1rem;
+  }
+  .card__topo { display: flex; align-items: baseline; gap: .6rem; flex-wrap: wrap; }
+  .card__nome { font-size: 1.2rem; font-weight: 700; margin: 0; }
+  .card__id { color: var(--accent); font-size: .8rem; }
+  .card__sub { color: var(--muted); font-size: .88rem; margin: .3rem 0 1rem; }
+
+  .campo { display: flex; gap: .5rem; flex-wrap: wrap; align-items: center; }
+  .campo label { font-size: .78rem; text-transform: uppercase; letter-spacing: .05em; color: var(--muted); font-weight: 700; width: 100%; }
+  input[type=text] {
+    flex: 1 1 380px;
+    min-width: 0;
+    padding: .55rem .7rem;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    background: var(--surface-2);
+    color: var(--text);
+    font: inherit;
+    font-size: .85rem;
+  }
+  input[type=text]::placeholder { color: var(--muted); }
+  input[type=text]:focus-visible {
+    outline: none;
+    border-color: var(--accent-borda);
+    box-shadow: 0 0 0 3px var(--accent-fraco);
+  }
+
+  .selo {
+    display: inline-block;
+    font-size: .68rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: .06em;
+    padding: .2rem .5rem;
+    border-radius: 6px;
+    background: var(--surface-2);
+    border: 1px solid var(--border);
+    color: var(--muted);
+  }
+  .selo--ok { color: var(--ok); }
+  .selo--alerta { color: var(--alerta); }
+  .selo--erro { color: var(--erro); }
+
+  .aviso { font-size: .84rem; margin: .6rem 0 0; }
+  .aviso--erro { color: var(--erro); }
+  .aviso--alerta { color: var(--alerta); }
+
+  .acoes { display: flex; gap: .5rem; flex-wrap: wrap; margin-top: 1.1rem; padding-top: 1.1rem; border-top: 1px solid var(--border); }
+  button {
+    font: inherit;
+    font-size: .84rem;
+    font-weight: 500;
+    letter-spacing: .35px;
+    padding: .5rem 1rem;
+    border-radius: 8px;
+    border: 1px solid var(--accent-borda);
+    background: var(--accent-fraco);
+    color: var(--accent);
+    cursor: pointer;
+    transition: background-color .12s ease, border-color .12s ease, color .12s ease;
+  }
+  button:hover:not(:disabled) { background: rgba(200, 241, 53, .12); border-color: var(--accent); }
+  button:disabled { opacity: .35; cursor: not-allowed; }
+  button.primario {
+    background: var(--accent);
+    border-color: var(--accent);
+    color: var(--sobre-accent);
+    border-radius: 10px;
+    font-weight: 600;
+  }
+  button.primario:hover:not(:disabled) { background: #d6f75a; border-color: #d6f75a; }
+  button.discreto {
+    background: transparent;
+    border-color: var(--border);
+    color: var(--muted);
+  }
+  button.discreto:hover:not(:disabled) { background: var(--surface-2); border-color: var(--border-forte); color: var(--text); }
+
+  #log { margin-top: 1.5rem; display: none; }
+  #log.visivel { display: block; }
+  .log__topo { display: flex; align-items: center; gap: .6rem; margin-bottom: .5rem; }
+  .log__titulo { font-weight: 700; font-size: .95rem; }
+  pre {
+    margin: 0;
+    background: var(--log-bg);
+    color: var(--text);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 1rem 1.1rem;
+    max-height: 22rem;
+    overflow: auto;
+    font: 12.5px/1.6 var(--mono);
+    white-space: pre-wrap;
+    word-break: break-word;
+  }
+  .girando {
+    width: .85rem; height: .85rem;
+    border: 2px solid var(--accent);
+    border-top-color: transparent;
+    border-radius: 50%;
+    animation: girar .7s linear infinite;
+  }
+  @keyframes girar { to { transform: rotate(360deg); } }
+
+  .vazio { color: var(--muted); font-size: .9rem; }
+  .rodape { margin-top: 2.5rem; text-align: center; font-size: .82rem; }
+
+  /* --- Escolha do produto --- */
+  .seletor { display: flex; align-items: center; gap: .6rem; margin-bottom: 1rem; }
+  .seletor label {
+    font-size: .78rem;
+    text-transform: uppercase;
+    letter-spacing: .06em;
+    color: var(--muted);
+    font-weight: 600;
+  }
+  select {
+    flex: 1 1 auto;
+    max-width: 420px;
+    padding: .55rem .7rem;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    background: var(--surface-2);
+    color: var(--text);
+    font: inherit;
+    font-size: .88rem;
+    cursor: pointer;
+  }
+  select:focus-visible {
+    outline: none;
+    border-color: var(--accent-borda);
+    box-shadow: 0 0 0 3px var(--accent-fraco);
+  }
+
+  /* --- Cadastro de um produto novo --- */
+
+  .repos {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(210px, 1fr));
+    gap: .5rem;
+    margin: .75rem 0 0;
+  }
+  .repo {
+    text-align: left;
+    padding: .6rem .75rem;
+    border-radius: 8px;
+    border: 1px solid var(--border);
+    background: var(--surface-2);
+    color: var(--text);
+    font: inherit;
+    font-size: .82rem;
+    cursor: pointer;
+    display: flex;
+    flex-direction: column;
+    gap: .25rem;
+  }
+  .repo:hover:not(:disabled) { border-color: var(--accent-borda); background: var(--accent-fraco); }
+  .repo[aria-pressed='true'] {
+    border-color: var(--accent);
+    background: var(--accent-fraco);
+    color: var(--accent);
+  }
+  .repo:disabled { opacity: .4; cursor: not-allowed; }
+  .repo small { color: var(--muted); font-size: .72rem; }
+
+  .grade-campos {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: .75rem 1rem;
+    margin-top: 1rem;
+  }
+  .grade-campos .campo { flex-direction: column; align-items: stretch; gap: .3rem; }
+  .grade-campos input[type=text] { flex: 1 1 auto; }
+  input[type=color] {
+    width: 100%;
+    height: 2.3rem;
+    padding: 2px;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    background: var(--surface-2);
+    cursor: pointer;
+  }
+  .dica { color: var(--muted); font-size: .75rem; margin: .15rem 0 0; }
+
+  /* --- Excluir produto --- */
+  .excluir-linha {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: .5rem;
+    margin-top: 1rem;
+    padding-top: 1rem;
+    border-top: 1px solid var(--border);
+  }
+  .excluir-aviso { color: var(--muted); font-size: .82rem; margin-right: auto; }
+  .perigo-link {
+    background: transparent;
+    border-color: transparent;
+    color: var(--muted);
+    padding: .35rem .5rem;
+    font-size: .8rem;
+    letter-spacing: 0;
+  }
+  .perigo-link:hover:not(:disabled) { background: transparent; border-color: transparent; color: var(--erro); }
+  .perigo {
+    background: transparent;
+    border-color: var(--erro);
+    color: var(--erro);
+  }
+  .perigo:hover:not(:disabled) { background: rgba(242, 86, 92, .12); border-color: var(--erro); }
+</style>
+</head>
+<body>
+<div class="container">
+  <header>
+    <h1>Documentação</h1>
+    <p class="tagline">Docusaurus + Playwright — uma instalação, vários produtos</p>
+    <p id="subtitulo">
+      Instalada em <code id="raiz">…</code> —
+      escolha o produto, confira onde fica o repositório dele nesta máquina e gere a documentação.
+    </p>
+  </header>
+
+  <div class="seletor" id="seletor" hidden>
+    <label for="comboProjeto">Produto</label>
+    <select id="comboProjeto"></select>
+  </div>
+
+  <div id="projetos"><p class="vazio">Carregando…</p></div>
+
+  <section id="novo" hidden>
+    <div class="card">
+      <h2 class="card__nome">Novo produto</h2>
+      <p class="card__sub">
+        Escolha o repositório do produto. O painel cria a documentação já pronta
+        para compilar: as seções padrão, um tema a partir da cor escolhida e um
+        modelo de captura de screenshots.
+      </p>
+
+      <div class="campo">
+        <label for="pastaBase">Pasta onde ficam seus repositórios</label>
+        <input type="text" id="pastaBase" spellcheck="false" placeholder="C:\Users\...\Projetos" />
+        <button id="btnProcurar">Procurar</button>
+      </div>
+
+      <div id="repos" class="repos"></div>
+      <p id="avisoRepos" class="aviso aviso--alerta" hidden></p>
+
+      <div id="detalhes" hidden>
+        <div class="grade-campos">
+          <div class="campo">
+            <label for="campoId">Identificador</label>
+            <input type="text" id="campoId" spellcheck="false" />
+            <p class="dica">Vira o nome da pasta e o argumento dos comandos.</p>
+          </div>
+          <div class="campo">
+            <label for="campoNome">Nome do produto</label>
+            <input type="text" id="campoNome" />
+            <p class="dica">Aparece no título e na navegação do portal.</p>
+          </div>
+          <div class="campo">
+            <label for="campoUrl">Endereço do app</label>
+            <input type="text" id="campoUrl" spellcheck="false" placeholder="https://meuproduto.com" />
+            <p class="dica">Onde o produto fica no ar. Serve para montar o sitemap.</p>
+          </div>
+          <div class="campo">
+            <label for="campoBaseUrl">Caminho da documentação</label>
+            <input type="text" id="campoBaseUrl" spellcheck="false" value="/docs/" />
+            <p class="dica">A barra final é obrigatória.</p>
+          </div>
+          <div class="campo">
+            <label for="campoCor">Cor da marca</label>
+            <input type="color" id="campoCor" value="#2f6feb" />
+            <p class="dica">O tema inteiro sai dela.</p>
+          </div>
+        </div>
+
+        <div class="acoes">
+          <button class="primario" id="btnCriar">Criar produto</button>
+          <button class="discreto" id="btnCancelar">Cancelar</button>
+        </div>
+      </div>
+
+      <p id="erroNovo" class="aviso aviso--erro" hidden></p>
+    </div>
+  </section>
+
+  <section id="log">
+    <div class="log__topo">
+      <span class="girando" id="girando" hidden></span>
+      <span class="log__titulo" id="logTitulo"></span>
+      <span class="selo" id="logSelo" hidden></span>
+      <button class="discreto" id="limparLog" style="margin-left:auto">Limpar</button>
+    </div>
+    <pre id="logTexto"></pre>
+  </section>
+
+  <p class="vazio rodape">
+    O painel funciona enquanto a janela do console estiver aberta — fechá-la desliga o servidor.
+  </p>
+</div>
+
+<script>
+const $ = (sel) => document.querySelector(sel);
+const el = (tag, props = {}, filhos = []) => {
+  const n = Object.assign(document.createElement(tag), props);
+  for (const f of [].concat(filhos)) n.append(f);
+  return n;
+};
+
+let rodando = false;
+
+const ORIGENS = {
+  env: (d) => ['selo--ok', `variável ${d}`],
+  local: () => ['selo--ok', 'configurado aqui'],
+  relativo: () => ['selo--alerta', 'caminho padrão'],
+  ausente: () => ['selo--erro', 'não configurado'],
+};
+
+async function carregar() {
+  try {
+    const r = await fetch('/api/projetos');
+    if (!r.ok) throw new Error(`o servidor respondeu ${r.status}`);
+    const { projetos, raiz, pastaBase } = await r.json();
+    $('#raiz').textContent = raiz;
+    if (pastaBase && !$('#pastaBase').value) $('#pastaBase').value = pastaBase;
+    desenhar(projetos);
+  } catch (e) {
+    semServidor(e);
+  }
+}
+
+/**
+ * Sozinha, esta página não faz nada: quem executa build, screenshots e
+ * publicação é o servidor local. Sem ele, explicar o que fazer — antes isto
+ * ficava em "Carregando…" para sempre, sem dizer o motivo.
+ */
+function semServidor(e) {
+  // Qualquer coisa que não seja http(s) veio do disco (file:, data:, blob:).
+  const doDisco = !location.protocol.startsWith('http');
+
+  $('#subtitulo').textContent = doDisco
+    ? 'Esta página foi aberta direto do disco.'
+    : 'Não consegui falar com o servidor do painel.';
+
+  $('#projetos').replaceChildren(
+    el('div', { className: 'card' }, [
+      el('h2', {
+        className: 'card__nome',
+        textContent: doDisco ? 'Abra pelo painel.bat' : 'O painel não está no ar',
+      }),
+      el('p', {
+        className: 'card__sub',
+        textContent: doDisco
+          ? 'O painel precisa de um servidor local para gerar a documentação — abrir o index.html no navegador não é suficiente.'
+          : `O servidor precisa estar rodando (${e.message}).`,
+      }),
+      el('p', {
+        className: 'aviso aviso--alerta',
+        textContent: doDisco
+          ? 'Feche esta aba e dê dois cliques em painel.bat, na pasta da documentação. O navegador abre sozinho no endereço certo.'
+          : 'Dê dois cliques em painel.bat, ou rode "npm run painel" no terminal.',
+      }),
+    ]),
+  );
+}
+
+const NOVO = '__novo';
+let listaProjetos = [];
+let selecionado = null;
+
+/**
+ * Monta o combo e mostra só o produto escolhido.
+ *
+ * Antes isto empilhava um cartão por produto: com dois já ficava comprido, e a
+ * ideia é escolher um e agir sobre ele.
+ */
+function desenhar(projetos) {
+  listaProjetos = projetos;
+
+  // Preserva a escolha entre atualizações; se o produto sumiu, cai no primeiro.
+  if (selecionado !== NOVO && !projetos.some((p) => p.id === selecionado)) {
+    selecionado = projetos[0]?.id ?? NOVO;
+  }
+
+  const combo = $('#comboProjeto');
+  combo.replaceChildren();
+  for (const p of projetos) {
+    combo.append(el('option', {
+      value: p.id,
+      textContent: p.erro ? `${p.id} — projeto.json inválido` : p.nome,
+    }));
+  }
+  combo.append(el('option', { value: NOVO, textContent: '+ Novo produto…' }));
+  combo.value = selecionado;
+  $('#seletor').hidden = false;
+
+  mostrarSelecionado();
+}
+
+function mostrarSelecionado() {
+  const alvo = $('#projetos');
+
+  if (selecionado === NOVO) {
+    alvo.replaceChildren();
+    if ($('#novo').hidden) {
+      $('#novo').hidden = false;
+      carregarRepositorios();
+    }
+    return;
+  }
+
+  $('#novo').hidden = true;
+  const p = listaProjetos.find((x) => x.id === selecionado);
+  alvo.replaceChildren(
+    p
+      ? cartaoDoProjeto(p)
+      : el('p', {
+          className: 'vazio',
+          textContent: 'Nenhum produto ainda — escolha "+ Novo produto" para criar o primeiro.',
+        }),
+  );
+  if (rodando) travarBotoes(true);
+}
+
+function cartaoDoProjeto(p) {
+  {
+    const card = el('div', { className: 'card' });
+
+    if (p.erro) {
+      card.append(
+        el('div', { className: 'card__topo' }, [
+          el('h2', { className: 'card__nome', textContent: p.id }),
+          el('span', { className: 'selo selo--erro', textContent: 'projeto.json inválido' }),
+        ]),
+        el('p', { className: 'aviso aviso--erro', textContent: p.erro }),
+      );
+      return card;
+    }
+
+    const [classeSelo, textoSelo] = ORIGENS[p.origem](p.detalhe);
+
+    card.append(
+      el('div', { className: 'card__topo' }, [
+        el('h2', { className: 'card__nome', textContent: p.nome }),
+        el('span', { className: 'card__id', textContent: p.id }),
+      ]),
+      el('p', {
+        className: 'card__sub',
+        textContent: `${p.url}${p.baseUrl}  ·  ${p.secoes.join(' · ')}`,
+      }),
+    );
+
+    const entrada = el('input', {
+      type: 'text',
+      value: p.caminho ?? '',
+      placeholder: 'C:\\caminho\\para\\o\\repositorio',
+      spellcheck: false,
+    });
+    const salvar = el('button', { textContent: 'Salvar' });
+    salvar.onclick = async () => {
+      salvar.disabled = true;
+      try {
+        const r = await fetch('/api/caminho', {
+          method: 'POST',
+          headers: { 'content-type': 'application/json' },
+          body: JSON.stringify({ id: p.id, caminho: entrada.value }),
+        });
+        const dados = await r.json();
+        if (dados.erro) throw new Error(dados.erro);
+        desenhar(dados.projetos);
+      } catch (e) {
+        // Sem isto o botão ficava desabilitado para sempre, sem explicação.
+        salvar.disabled = false;
+        card.append(el('p', {
+          className: 'aviso aviso--erro',
+          textContent: `Não consegui salvar o caminho: ${e.message}`,
+        }));
+      }
+    };
+
+    card.append(
+      el('div', { className: 'campo' }, [
+        el('label', { textContent: `Repositório do produto (a doc vai para ${p.destino})` }),
+        entrada,
+        el('span', { className: `selo ${classeSelo}`, textContent: textoSelo }),
+        salvar,
+      ]),
+    );
+
+    if (p.caminho && !p.existe) {
+      card.append(el('p', {
+        className: 'aviso aviso--erro',
+        textContent: 'Essa pasta não existe. Corrija o caminho antes de publicar.',
+      }));
+    } else if (p.foraDoPadrao) {
+      // A pasta existir não quer dizer que seja a certa: publicar apaga o
+      // public/docs de destino. Se o caminho fugiu do padrão do projeto, dizer.
+      card.append(el('p', {
+        className: 'aviso aviso--alerta',
+        textContent:
+          `Atenção: este caminho não é o padrão do projeto (${p.padrao}). ` +
+          `Publicar vai substituir ${p.destino} da pasta acima.`,
+      }));
+    }
+    if (!p.temEnv) {
+      card.append(el('p', {
+        className: 'aviso aviso--alerta',
+        textContent: `Sem projetos/${p.id}/.env — os screenshots precisam das credenciais da conta de demonstração.`,
+      }));
+    }
+
+    const acoes = el('div', { className: 'acoes' });
+    const botoes = [
+      ['screenshots', 'Gerar screenshots', false, !p.temEnv],
+      ['build', 'Gerar build', false, false],
+      ['publicar', 'Publicar no repositório', true, !p.existe],
+    ];
+    for (const [acao, rotulo, primario, bloqueado] of botoes) {
+      const b = el('button', {
+        textContent: rotulo,
+        className: primario ? 'primario' : '',
+        disabled: bloqueado,
+      });
+      b.dataset.acao = 'sim';
+      b.dataset.bloqueado = bloqueado ? 'sim' : 'nao';
+      b.onclick = () => executar(acao, p.id, `${rotulo} — ${p.nome}`);
+      acoes.append(b);
+    }
+    card.append(acoes);
+    card.append(rodapeExcluir(p));
+    return card;
+  }
+}
+
+/**
+ * Linha de excluir, com confirmação em dois passos no lugar de um confirm() do
+ * navegador — apaga a documentação do produto (não o repositório dele).
+ */
+function rodapeExcluir(p) {
+  const linha = el('div', { className: 'excluir-linha' });
+
+  const abrir = el('button', { className: 'perigo-link', textContent: 'Excluir este produto' });
+  const montarConfirmacao = () => {
+    linha.replaceChildren(
+      el('span', {
+        className: 'excluir-aviso',
+        textContent: `Apagar projetos/${p.id}/ e o build? O repositório do produto não é tocado.`,
+      }),
+      (() => {
+        const sim = el('button', { className: 'perigo', textContent: 'Excluir' });
+        sim.onclick = async () => {
+          sim.disabled = true;
+          try {
+            const r = await fetch('/api/excluir', {
+              method: 'POST',
+              headers: { 'content-type': 'application/json' },
+              body: JSON.stringify({ id: p.id }),
+            });
+            const dados = await r.json();
+            if (dados.erro) throw new Error(dados.erro);
+            selecionado = null; // deixa desenhar escolher o próximo
+            desenhar(dados.projetos);
+          } catch (e) {
+            sim.disabled = false;
+            linha.append(el('p', { className: 'aviso aviso--erro', textContent: e.message }));
+          }
+        };
+        return sim;
+      })(),
+      (() => {
+        const nao = el('button', { className: 'discreto', textContent: 'Cancelar' });
+        nao.onclick = () => linha.replaceChildren(abrir);
+        return nao;
+      })(),
+    );
+  };
+  abrir.onclick = montarConfirmacao;
+
+  linha.append(abrir);
+  return linha;
+}
+
+function travarBotoes(travar) {
+  for (const b of document.querySelectorAll('button[data-acao]')) {
+    if (travar) b.disabled = true;
+    else b.disabled = b.dataset.bloqueado === 'sim';
+  }
+}
+
+function executar(acao, id, titulo) {
+  if (rodando) return;
+  rodando = true;
+  travarBotoes(true);
+
+  $('#log').classList.add('visivel');
+  $('#logTitulo').textContent = titulo;
+  $('#logTexto').textContent = '';
+  $('#girando').hidden = false;
+  $('#logSelo').hidden = true;
+  $('#log').scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+
+  const fonte = new EventSource(`/api/executar?acao=${encodeURIComponent(acao)}&projeto=${encodeURIComponent(id)}`);
+
+  fonte.addEventListener('linha', (e) => {
+    const pre = $('#logTexto');
+    const coladoEmbaixo = pre.scrollTop + pre.clientHeight >= pre.scrollHeight - 24;
+    pre.textContent += JSON.parse(e.data) + '\n';
+    if (coladoEmbaixo) pre.scrollTop = pre.scrollHeight;
+  });
+
+  fonte.addEventListener('fim', (e) => {
+    const { codigo } = JSON.parse(e.data);
+    const selo = $('#logSelo');
+    selo.hidden = false;
+    selo.textContent = codigo === 0 ? 'concluído' : `falhou (código ${codigo})`;
+    selo.className = `selo ${codigo === 0 ? 'selo--ok' : 'selo--erro'}`;
+    $('#girando').hidden = true;
+    fonte.close();
+    rodando = false;
+    carregar();
+  });
+
+  fonte.onerror = () => {
+    if (!rodando) return;
+    $('#logTexto').textContent += '\n[conexão com o painel interrompida]\n';
+    $('#girando').hidden = true;
+    fonte.close();
+    rodando = false;
+    carregar();
+  };
+}
+
+// "Limpar" some com o bloco inteiro. Antes esvaziava só o texto e deixava o
+// título e o selo na tela, parecendo que algo tinha ficado pendurado.
+$('#limparLog').onclick = () => {
+  $('#log').classList.remove('visivel');
+  $('#logTexto').textContent = '';
+  $('#logTitulo').textContent = '';
+  $('#logSelo').hidden = true;
+};
+
+// ---------------------------------------------------------------- novo produto
+
+let repoEscolhido = null;
+
+// O NFD separa o acento da letra; \p{Diacritic} então remove o acento sozinho.
+// Preferido a uma faixa de caracteres combinantes, que fica invisível no código.
+const paraId = (nome) =>
+  nome.toLowerCase().normalize('NFD').replace(/\p{Diacritic}/gu, '')
+    .replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '');
+
+const paraNome = (pasta) =>
+  pasta.replace(/[-_]+/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase());
+
+function erroNovo(mensagem) {
+  const p = $('#erroNovo');
+  p.hidden = !mensagem;
+  p.textContent = mensagem || '';
+}
+
+async function carregarRepositorios(base) {
+  const alvo = $('#repos');
+  alvo.replaceChildren(el('p', { className: 'vazio', textContent: 'Procurando…' }));
+
+  const r = base === undefined
+    ? await fetch('/api/repositorios')
+    : await fetch('/api/base', {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ base }),
+      });
+  const dados = await r.json();
+
+  if (dados.base && !$('#pastaBase').value) $('#pastaBase').value = dados.base;
+
+  const aviso = $('#avisoRepos');
+  alvo.replaceChildren();
+
+  if (!dados.base) {
+    aviso.hidden = false;
+    aviso.textContent = 'Informe a pasta onde ficam seus repositórios e clique em Procurar.';
+    return;
+  }
+  if (!dados.existe) {
+    aviso.hidden = false;
+    aviso.textContent = `A pasta ${dados.base} não existe.`;
+    return;
+  }
+  if (!dados.repositorios.length) {
+    aviso.hidden = false;
+    aviso.textContent = `Nenhum repositório em ${dados.base} — procuro por pastas com .git ou package.json.`;
+    return;
+  }
+  aviso.hidden = true;
+
+  for (const repo of dados.repositorios) {
+    // Sem public/ não há onde a documentação ser servida pelo app.
+    const impedimento = repo.usadoPor
+      ? `já documentado (${repo.usadoPor})`
+      : !repo.temPublic
+        ? 'sem pasta public/'
+        : null;
+
+    const botao = el('button', {
+      className: 'repo',
+      disabled: Boolean(impedimento),
+      title: impedimento ? `${repo.caminho} — ${impedimento}` : repo.caminho,
+    }, [
+      el('span', { textContent: repo.nome }),
+      el('small', { textContent: impedimento ?? 'pronto para documentar' }),
+    ]);
+    botao.setAttribute('aria-pressed', 'false');
+
+    botao.onclick = () => {
+      for (const b of alvo.querySelectorAll('.repo')) b.setAttribute('aria-pressed', 'false');
+      botao.setAttribute('aria-pressed', 'true');
+      repoEscolhido = repo;
+      $('#campoId').value = paraId(repo.nome);
+      $('#campoNome').value = paraNome(repo.nome);
+      $('#detalhes').hidden = false;
+      erroNovo('');
+    };
+    alvo.append(botao);
+  }
+}
+
+$('#comboProjeto').onchange = (e) => {
+  selecionado = e.target.value;
+  mostrarSelecionado();
+};
+
+$('#btnProcurar').onclick = () => carregarRepositorios($('#pastaBase').value.trim());
+
+/** Sai do cadastro e volta para o primeiro produto da lista. */
+function fecharCadastro() {
+  $('#detalhes').hidden = true;
+  repoEscolhido = null;
+  erroNovo('');
+  selecionado = listaProjetos[0]?.id ?? NOVO;
+  $('#comboProjeto').value = selecionado;
+  mostrarSelecionado();
+}
+
+$('#btnCancelar').onclick = fecharCadastro;
+
+$('#btnCriar').onclick = async () => {
+  if (!repoEscolhido) return erroNovo('Escolha um repositório antes.');
+  const botao = $('#btnCriar');
+  botao.disabled = true;
+  erroNovo('');
+  try {
+    const r = await fetch('/api/projetos', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({
+        id: $('#campoId').value.trim(),
+        nome: $('#campoNome').value.trim(),
+        url: $('#campoUrl').value.trim(),
+        baseUrl: $('#campoBaseUrl').value.trim(),
+        cor: $('#campoCor').value,
+        repositorio: repoEscolhido.caminho,
+      }),
+    });
+    const dados = await r.json();
+    if (dados.erro) throw new Error(dados.erro);
+
+    $('#detalhes').hidden = true;
+    repoEscolhido = null;
+    erroNovo('');
+    // Já abre no produto recém-criado, que é o que ela vai querer mexer agora.
+    selecionado = dados.criado;
+    desenhar(dados.projetos);
+
+    $('#log').classList.add('visivel');
+    $('#logTitulo').textContent = `Produto "${dados.criado}" criado`;
+    $('#logSelo').hidden = false;
+    $('#logSelo').textContent = 'concluído';
+    $('#logSelo').className = 'selo selo--ok';
+    $('#logTexto').textContent =
+      `projetos/${dados.criado}/\n` +
+      dados.arquivos.map((a) => `  ${a}`).join('\n') +
+      `\n\nEscreva os artigos em projetos/${dados.criado}/docs/ e use "Gerar build" para ver o resultado.` +
+      `\nOs screenshots nascem como modelo: ajuste playwright/ antes de rodá-los.`;
+  } catch (e) {
+    erroNovo(e.message);
+  } finally {
+    botao.disabled = false;
+  }
+};
+
+carregar();
+</script>
+</body>
+</html>

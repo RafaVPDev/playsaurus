@@ -1,0 +1,281 @@
+/**
+ * Base do portal de documentação — comum a todos os produtos
+ * ----------------------------------------------------------------------------
+ * Este arquivo não contém nenhuma cor de marca. Ele mapeia as variáveis do
+ * Infima (--ifm-*) para um conjunto genérico de tokens (--doc-*), e o tema de
+ * cada produto (projetos/<id>/tema.css) preenche esses tokens.
+ *
+ * Regra prática: se um valor mudaria ao documentar outro produto, ele pertence
+ * ao tema do produto, não a este arquivo.
+ *
+ * Ordem de carga: base.css primeiro, tema.css depois — o produto sempre pode
+ * sobrescrever o que estiver aqui.
+ */
+
+/* ============================================================
+   MAPEAMENTO INFIMA -> TOKENS GENÉRICOS
+   ============================================================ */
+:root {
+  /* --- Base --- */
+  --ifm-background-color: var(--doc-background);
+  --ifm-background-surface-color: var(--doc-surface);
+  --ifm-font-color-base: var(--doc-text);
+  --ifm-heading-color: var(--doc-text);
+  --ifm-font-family-base: 'Inter', system-ui, -apple-system, 'Segoe UI', Roboto, Arial, sans-serif;
+  --ifm-font-family-monospace: 'Roboto Mono', ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  --ifm-heading-font-weight: 700;
+  --ifm-global-radius: 0.5rem;
+
+  /* --- Bordas / ênfase --- */
+  --ifm-color-emphasis-200: var(--doc-surface-2);
+  --ifm-color-emphasis-300: var(--doc-border);
+  --ifm-toc-border-color: var(--doc-border);
+  --ifm-table-border-color: var(--doc-border);
+  --ifm-hr-background-color: var(--doc-border);
+
+  /* --- Código --- */
+  --ifm-code-background: var(--doc-surface-2);
+  --ifm-pre-background: var(--doc-pre-bg);
+  --ifm-code-font-size: 92%;
+
+  /* --- Sidebar / menu --- */
+  --ifm-menu-color: var(--doc-text);
+  --ifm-menu-color-background-active: var(--doc-menu-ativo-bg);
+  --ifm-menu-color-background-hover: var(--doc-menu-hover-bg);
+  --ifm-menu-color-active: var(--doc-menu-ativo-cor);
+
+  /* --- Links --- */
+  --ifm-link-color: var(--doc-primary);
+  --ifm-link-hover-color: var(--doc-primary-hover);
+
+  /* --- Navbar (escura em ambos os temas) --- */
+  --ifm-navbar-background-color: var(--doc-navbar-bg);
+  --ifm-navbar-link-color: rgba(255, 255, 255, 0.85);
+  --ifm-navbar-link-hover-color: var(--doc-navbar-link-hover);
+
+  /* --- Rodapé --- */
+  --ifm-footer-background-color: var(--doc-footer-bg);
+
+  /* --- Admonitions / status --- */
+  --ifm-color-info: var(--doc-primary);
+  --ifm-color-success: var(--doc-success);
+  --ifm-color-warning: var(--doc-warning);
+  --ifm-color-danger: var(--doc-danger);
+}
+
+/* ============================================================
+   NAVBAR
+   ============================================================ */
+.navbar {
+  box-shadow: 0 1px 0 rgba(0, 0, 0, 0.25);
+}
+.navbar__title {
+  color: #fff;
+}
+.navbar__logo {
+  height: 2rem;
+}
+.navbar__link {
+  font-weight: 500;
+}
+.navbar__link--active {
+  color: #fff;
+}
+.navbar__link--active::after {
+  content: '';
+  display: block;
+  height: 2px;
+  margin-top: 4px;
+  border-radius: 2px;
+  background: var(--doc-primary);
+}
+/* Botões de ícone (tema, menu) legíveis sobre a navbar escura */
+.navbar .clean-btn {
+  color: rgba(255, 255, 255, 0.85);
+}
+.navbar .clean-btn:hover {
+  background: rgba(255, 255, 255, 0.12);
+}
+.navbar-sidebar {
+  background: var(--ifm-background-color);
+}
+
+/* ============================================================
+   SIDEBAR (menu de documentos)
+   ============================================================ */
+.theme-doc-sidebar-container {
+  background: var(--doc-sidebar-bg);
+  border-right: 1px solid var(--doc-border);
+}
+.menu__link {
+  border-radius: 6px;
+}
+.menu__link:hover {
+  color: var(--doc-primary-hover);
+}
+/* Item ativo marcado com a cor primária do produto */
+.menu__link--active:not(.menu__link--sublist) {
+  font-weight: 600;
+  box-shadow: inset 3px 0 0 var(--doc-primary);
+}
+
+/* ============================================================
+   LINKS, BOTÕES
+   ============================================================ */
+.button--primary {
+  --ifm-button-background-color: var(--doc-primary);
+  --ifm-button-border-color: var(--doc-primary);
+  color: #fff;
+}
+.button--primary:hover {
+  --ifm-button-background-color: var(--doc-primary-hover);
+  --ifm-button-border-color: var(--doc-primary-hover);
+}
+.button--secondary {
+  --ifm-button-background-color: var(--doc-surface-2);
+  --ifm-button-border-color: var(--doc-border);
+  color: var(--doc-text);
+}
+
+/* ============================================================
+   CÓDIGO (inline e blocos)
+   ============================================================ */
+code {
+  background: var(--ifm-code-background);
+  border: 1px solid var(--doc-border);
+  border-radius: 5px;
+  padding: 0.1rem 0.35rem;
+}
+/* Dentro de blocos, o code herda o estilo do <pre> */
+.theme-code-block code,
+pre code {
+  border: none;
+  background: transparent;
+  padding: 0;
+}
+div[class*='codeBlockContainer'] {
+  border: 1px solid var(--doc-border);
+  border-radius: 8px;
+}
+
+/* ============================================================
+   TABELAS
+   ============================================================ */
+table thead tr {
+  background: var(--doc-surface-2);
+  border-bottom: 2px solid var(--doc-border);
+}
+table th,
+table td {
+  border-color: var(--doc-border);
+}
+table tr:nth-child(2n) {
+  background: color-mix(in srgb, var(--doc-surface-2) 45%, transparent);
+}
+
+/* ============================================================
+   ADMONITIONS / ALERTAS
+   ============================================================ */
+.theme-admonition {
+  border-radius: 8px;
+  border-left-width: 4px;
+}
+
+/* ============================================================
+   BREADCRUMBS
+   ============================================================ */
+.breadcrumbs__item--active .breadcrumbs__link {
+  background: var(--ifm-menu-color-background-active);
+  color: var(--doc-primary-hover);
+}
+.breadcrumbs__link:hover {
+  background: var(--ifm-menu-color-background-hover);
+}
+
+/* ============================================================
+   PAGINAÇÃO
+   ============================================================ */
+.pagination-nav__link {
+  border: 1px solid var(--doc-border);
+  border-radius: 8px;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+.pagination-nav__link:hover {
+  border-color: var(--doc-primary);
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.06);
+}
+.pagination-nav__sublabel {
+  color: var(--doc-text-muted);
+}
+
+/* ============================================================
+   BUSCA (caso um plugin de busca seja habilitado)
+   ============================================================ */
+.navbar__search-input,
+.DocSearch-Button {
+  background: rgba(255, 255, 255, 0.1);
+  color: #fff;
+  border-radius: 6px;
+}
+.navbar__search-input::placeholder {
+  color: rgba(255, 255, 255, 0.6);
+}
+
+/* ============================================================
+   TABLE OF CONTENTS (direita)
+   ============================================================ */
+.table-of-contents__link--active {
+  color: var(--doc-primary);
+  font-weight: 600;
+}
+
+/* ============================================================
+   SCROLLBAR
+   ============================================================ */
+html {
+  scrollbar-color: var(--doc-scrollbar-thumb) transparent;
+}
+::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: var(--doc-scrollbar-thumb);
+  border-radius: 8px;
+  border: 2px solid transparent;
+  background-clip: content-box;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: var(--doc-primary);
+  background-clip: content-box;
+}
+
+/* ============================================================
+   SELEÇÃO DE TEXTO E FOCO DE TECLADO
+   ============================================================ */
+::selection {
+  background: var(--doc-selection);
+}
+a:focus-visible,
+button:focus-visible,
+.button:focus-visible,
+.menu__link:focus-visible,
+.navbar__link:focus-visible,
+.pagination-nav__link:focus-visible {
+  outline: 2px solid var(--doc-primary);
+  outline-offset: 2px;
+  border-radius: 4px;
+}
+
+/* ============================================================
+   DIAGRAMAS MERMAID
+   ============================================================ */
+.docusaurus-mermaid-container {
+  background: var(--ifm-background-surface-color);
+  border: 1px solid var(--doc-border);
+  border-radius: 8px;
+  padding: 0.75rem;
+}

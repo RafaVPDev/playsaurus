@@ -1,0 +1,34 @@
+# Dependências (uma vez só, ~700 MB — nunca versionar)
+/node_modules
+
+# Builds gerados, um por produto
+/build
+
+# Cache do Docusaurus
+.docusaurus
+.cache-loader
+
+# Caminhos dos repositórios NESTA máquina — cada pessoa tem os seus.
+# Ajuste pelo painel (`npm run painel`), não à mão.
+/caminhos.local.json
+
+# Conteúdo de projetos/ é individual de cada máquina: a pasta sobe, o conteúdo
+# não. Cada pessoa cria os próprios produtos pelo painel (inclusive o Oktask).
+# O .gitkeep mantém a pasta no repositório mesmo vazia.
+/projetos/*
+!/projetos/.gitkeep
+
+# Sessões autenticadas do Playwright
+/.auth
+
+# Playwright
+/test-results/
+/playwright-report/
+/blob-report/
+/playwright/.cache/
+
+# Misc
+.DS_Store
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
