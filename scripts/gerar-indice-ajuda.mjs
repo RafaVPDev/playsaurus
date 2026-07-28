@@ -96,17 +96,35 @@ try {
       .trim();
   }
 
-  /**
-   * Reproduz a regra de slug do Docusaurus: remove o prefixo numérico.
-   * A barra final é obrigatória — as páginas são geradas como `pasta/index.html`
-   * e, sem ela, o servidor estático não resolve o índice do diretório.
-   */
-  function urlDoArquivo(relativo) {
+  /** Reproduz a regra de slug do Docusaurus: remove o prefixo numérico. */
+  function caminhoDoArquivo(relativo) {
     const semExt = relativo.replace(/\.(md|mdx)$/, '');
     const partes = semExt.split('/').map((s) => s.replace(/^\d+-/, ''));
     if (partes[partes.length - 1] === 'index') partes.pop();
-    const caminho = partes.join('/');
+    return partes.join('/');
+  }
+
+  /**
+   * URL canônica usada pelo Docusaurus e pelo sitemap.
+   *
+   * O trailingSlash do build gera cada rota como `pasta/index.html`, enquanto o
+   * sitemap mantém a forma amigável `pasta/`.
+   */
+  function urlCanonicaDoArquivo(relativo) {
+    const caminho = caminhoDoArquivo(relativo);
     return caminho ? `${BASE_URL}/${caminho}/` : `${BASE_URL}/`;
+  }
+
+  /**
+   * URL entregue à Central de Ajuda.
+   *
+   * O arquivo explícito funciona tanto em servidores estáticos tradicionais
+   * quanto em hospedagens de SPA que não transformam `/pasta/` em
+   * `/pasta/index.html` antes de aplicar o catch-all do aplicativo.
+   */
+  function urlPublicaDoArquivo(relativo) {
+    const caminho = caminhoDoArquivo(relativo);
+    return caminho ? `${BASE_URL}/${caminho}/index.html` : `${BASE_URL}/index.html`;
   }
 
   /** Compara URLs ignorando a barra final, para validar contra o sitemap. */
@@ -139,9 +157,10 @@ try {
     const secaoId = relativo.split('/')[0];
     // Seção interna (fora de `secoes` no modo público): não entra no índice.
     if (!(secaoId in SECOES)) continue;
-    const url = urlDoArquivo(relativo);
-    if (sitemap && !sitemap.has(semBarra(url))) {
-      avisos.push(`URL fora do sitemap: ${url} (${relativo})`);
+    const urlCanonica = urlCanonicaDoArquivo(relativo);
+    const url = urlPublicaDoArquivo(relativo);
+    if (sitemap && !sitemap.has(semBarra(urlCanonica))) {
+      avisos.push(`URL fora do sitemap: ${urlCanonica} (${relativo})`);
     }
 
     const titulo = (corpo.match(/^#\s+(.+)$/m) || [, path.basename(relativo)])[1].trim();

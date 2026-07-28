@@ -559,8 +559,14 @@ Teste no mínimo:
 - uma âncora de Pergunta Frequente;
 - `/docs/help-index.json`.
 
-Confirme que URLs de página com barra final resolvem para o `index.html`
-correspondente.
+Use em cada resultado a propriedade `url` do `help-index.json` exatamente como
+foi gerada. Não remova `index.html`, não retire a barra final do diretório e não
+reconstrua a rota a partir do título ou do `id`. O índice usa o arquivo HTML
+explícito para funcionar também em hospedagens de SPA que não resolvem
+automaticamente URLs de diretório.
+
+Confirme que URLs como `/docs/<secao>/<pagina>/index.html` abrem o artigo
+correspondente diretamente, inclusive em uma nova aba e depois da publicação.
 
 Se, somente em desenvolvimento, `/docs/<pagina>/` cair no roteador do aplicativo
 e retornar 404:

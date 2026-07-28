@@ -75,6 +75,8 @@
   .campo--check label { width: auto; text-transform: none; letter-spacing: normal; font-weight: 600; color: inherit; font-size: .9rem; order: 2; }
   .campo--check input[type="checkbox"] { width: 1.05rem; height: 1.05rem; order: 1; accent-color: var(--accent); cursor: pointer; }
   .campo--check .selo { order: 3; }
+  .campo--video { margin-top: 1.1rem; }
+  .campo--video input[type="text"] { flex: 1 1 260px; }
   input[type=text] {
     flex: 1 1 380px;
     min-width: 0;
@@ -816,7 +818,8 @@ function cartaoDoProjeto(p) {
     const aguardandoSalvar = () => entrada.value !== caminhoConfirmado;
     const atualizarBloqueioDasAcoes = () => {
       const precisaSalvar = aguardandoSalvar();
-      for (const b of acoes.querySelectorAll('button[data-acao]')) {
+      // Varre o card inteiro (não só .acoes) para pegar também o "Gravar vídeo".
+      for (const b of card.querySelectorAll('button[data-acao]')) {
         b.dataset.aguardaSalvar = precisaSalvar ? 'sim' : 'nao';
         b.disabled =
           rodando ||
@@ -841,10 +844,94 @@ function cartaoDoProjeto(p) {
     }
     entrada.addEventListener('input', atualizarBloqueioDasAcoes);
     card.append(acoes);
+    card.append(linhaVideo(p, aguardandoSalvar));
     if (previewAtivo && previewAtivo.id === p.id) card.append(linhaPreview(previewAtivo.url));
     card.append(rodapeExcluir(p));
     return card;
   }
+}
+
+/**
+ * Campo para gravar um vídeo de tutorial sem abrir o terminal: roda
+ * `videos.mjs` com o roteiro digitado (vazio = todos). O autocomplete lista os
+ * roteiros *.jornada.spec.ts já existentes no projeto.
+ */
+function linhaVideo(p, aguardandoSalvar = () => false) {
+  const idLista = `roteiros-${p.id}`;
+  const entrada = el('input', {
+    type: 'text',
+    placeholder: 'roteiro, ex.: tutoriais-rapidos/central-ajuda — vazio grava todos',
+    spellcheck: false,
+  });
+  // `list` é propriedade só-leitura no input: liga pelo atributo, não por Object.assign.
+  entrada.setAttribute('list', idLista);
+  const lista = el('datalist', { id: idLista });
+
+  // Só o roteiro entra no comando. Se colarem o comando inteiro
+  // (ex.: "npm run videos -- oktask tutoriais/x.jornada.spec.ts"), fica só o
+  // último pedaço — o caminho do roteiro não tem espaços.
+  const soORoteiro = (valor) => {
+    const limpo = valor.trim();
+    return /\s/.test(limpo) ? limpo.split(/\s+/).pop() : limpo;
+  };
+  const botao = el('button', {
+    textContent: 'Gravar vídeo',
+    disabled: !p.temEnv || aguardandoSalvar(),
+    title: p.temEnv
+      ? 'O app precisa estar rodando na URL base do projeto.'
+      : `Falta projetos/${p.id}/.env com as credenciais da conta de demonstração.`,
+  });
+  botao.dataset.acao = 'sim';
+  botao.dataset.bloqueado = p.temEnv ? 'nao' : 'sim';
+  // Como os demais botões: bloqueado até confirmar o caminho do repositório (Salvar).
+  botao.dataset.aguardaSalvar = aguardandoSalvar() ? 'sim' : 'nao';
+
+  const rodar = () => {
+    if (botao.disabled || rodando) return;
+    executar('videos', p.id, `Gravar vídeo — ${p.nome}`, { arg: soORoteiro(entrada.value) || undefined });
+  };
+  botao.onclick = rodar;
+  entrada.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') rodar();
+  });
+
+  // Mantém o autocomplete em dia com a pasta playwright/: recarrega ao abrir o
+  // campo e, enquanto ele está em foco, a cada 2s — colar ou remover um roteiro
+  // reflete na hora, sem recarregar a página.
+  const carregarRoteiros = () =>
+    fetch(`/api/roteiros?projeto=${encodeURIComponent(p.id)}`)
+      .then((r) => r.json())
+      .then((d) => {
+        const novos = d.roteiros ?? [];
+        const atuais = [...lista.querySelectorAll('option')].map((o) => o.value);
+        // Só reconstrói se a lista mudou de fato — reconstruir com o dropdown
+        // aberto o fecharia. Sem mudança, o dropdown continua aberto.
+        const igual = novos.length === atuais.length && novos.every((v, i) => v === atuais[i]);
+        if (!igual) lista.replaceChildren(...novos.map((rt) => el('option', { value: rt })));
+      })
+      .catch(() => {});
+
+  carregarRoteiros();
+  let poll = null;
+  entrada.addEventListener('focus', () => {
+    carregarRoteiros();
+    clearInterval(poll);
+    poll = setInterval(() => {
+      // Se o card foi re-renderizado, o input sai do documento: encerra o poll.
+      if (!document.contains(entrada)) return clearInterval(poll);
+      carregarRoteiros();
+    }, 2000);
+  });
+  entrada.addEventListener('blur', () => clearInterval(poll));
+
+  return el('div', { className: 'campo campo--video' }, [
+    el('label', {
+      textContent: 'Gravar vídeo de tutorial (o app precisa estar no ar) — vazio grava todos os roteiros',
+    }),
+    entrada,
+    lista,
+    botao,
+  ]);
 }
 
 /**
@@ -919,7 +1006,8 @@ function executar(acao, id, titulo, opcoes = {}) {
   $('#log').scrollIntoView({ behavior: 'smooth', block: 'nearest' });
 
   const paramModo = opcoes.modo ? `&modo=${encodeURIComponent(opcoes.modo)}` : '';
-  const fonte = new EventSource(`/api/executar?acao=${encodeURIComponent(acao)}&projeto=${encodeURIComponent(id)}${paramModo}`);
+  const paramArg = opcoes.arg ? `&arg=${encodeURIComponent(opcoes.arg)}` : '';
+  const fonte = new EventSource(`/api/executar?acao=${encodeURIComponent(acao)}&projeto=${encodeURIComponent(id)}${paramModo}${paramArg}`);
 
   fonte.addEventListener('linha', (e) => {
     const pre = $('#logTexto');

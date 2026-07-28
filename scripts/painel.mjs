@@ -18,7 +18,7 @@ import { createServer } from 'node:http';
 import net from 'node:net';
 import { spawn } from 'node:child_process';
 import { readFile, stat } from 'node:fs/promises';
-import { existsSync } from 'node:fs';
+import { existsSync, readdirSync } from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { createRequire } from 'node:module';
@@ -51,6 +51,7 @@ const ACOES = {
   screenshots: { script: 'screenshots.mjs', titulo: 'Gerando screenshots' },
   build: { script: 'build.mjs', titulo: 'Gerando build' },
   publicar: { script: 'publicar.mjs', titulo: 'Publicando' },
+  videos: { script: 'videos.mjs', titulo: 'Gravando vídeos' },
 };
 
 let emExecucao = null;
@@ -138,6 +139,27 @@ async function iniciarPreview(id, modo = 'interno') {
 
 // ------------------------------------------------------------------ estado
 
+const SUFIXO_ROTEIRO = '.jornada.spec.ts';
+
+/** Roteiros de vídeo (*.jornada.spec.ts) sob playwright/, em caminho relativo posix. */
+function listarRoteiros(dirPlaywright) {
+  const achados = [];
+  const varrer = (dir) => {
+    if (!existsSync(dir)) return;
+    for (const entry of readdirSync(dir, { withFileTypes: true }).sort((a, b) =>
+      a.name.localeCompare(b.name),
+    )) {
+      const p = path.join(dir, entry.name);
+      if (entry.isDirectory()) varrer(p);
+      else if (entry.name.endsWith(SUFIXO_ROTEIRO)) {
+        achados.push(path.relative(dirPlaywright, p).split(path.sep).join('/'));
+      }
+    }
+  };
+  varrer(dirPlaywright);
+  return achados;
+}
+
 function estadoDosProjetos() {
   return listarProjetos().map((id) => {
     try {
@@ -209,8 +231,13 @@ async function lerCorpo(req, limite = 64 * 1024) {
 
 // ------------------------------------------------------------------ execução
 
-/** Roda um script de scripts/ repassando a saída por Server-Sent Events. */
-function executarComStream(res, acao, id, modo) {
+/**
+ * Roda um script de scripts/ repassando a saída por Server-Sent Events.
+ * `arg` é um parâmetro opcional do script (ex.: o roteiro de vídeo). Não vira
+ * comando: entra como argumento do processo (spawn sem shell) e é o próprio
+ * script que o valida (ex.: videos.mjs confina o roteiro à pasta playwright/).
+ */
+function executarComStream(res, acao, id, modo, arg) {
   const { script, titulo } = ACOES[acao];
 
   // Uma pré-visualização do mesmo projeto segura os arquivos de build/<id>; no
@@ -236,7 +263,7 @@ function executarComStream(res, acao, id, modo) {
   const sufixo = modo === 'publico' ? ' (cliente)' : '';
   enviar('inicio', { titulo: `${titulo}${sufixo} — ${id}` });
 
-  const filho = spawn(process.execPath, [path.join(aqui, script), id], {
+  const filho = spawn(process.execPath, [path.join(aqui, script), id, ...(arg ? [arg] : [])], {
     cwd: RAIZ,
     env: { ...process.env, FORCE_COLOR: '0', ...(modo ? { DOC_MODO: modo } : {}) },
   });
@@ -408,11 +435,29 @@ const servidor = createServer(async (req, res) => {
       const acao = url.searchParams.get('acao');
       const id = url.searchParams.get('projeto');
       const modo = url.searchParams.get('modo') === 'publico' ? 'publico' : undefined;
+      // Parâmetro opcional do script (ex.: o roteiro de vídeo). Uma linha, curto:
+      // o script é quem valida de fato; aqui só barramos abuso óbvio.
+      const argBruto = (url.searchParams.get('arg') ?? '').trim();
+      const arg = argBruto && argBruto.length <= 200 && !/[\r\n]/.test(argBruto) ? argBruto : undefined;
       if (!ACOES[acao]) return json(res, { erro: `Ação desconhecida: ${acao}` }, 400);
       if (!listarProjetos().includes(id)) {
         return json(res, { erro: `Projeto desconhecido: ${id}` }, 400);
       }
-      return executarComStream(res, acao, id, modo);
+      return executarComStream(res, acao, id, modo, arg);
+    }
+
+    // Lista os roteiros de vídeo (*.jornada.spec.ts) do projeto, para o autocomplete.
+    if (url.pathname === '/api/roteiros') {
+      const id = url.searchParams.get('projeto');
+      if (!listarProjetos().includes(id)) {
+        return json(res, { erro: `Projeto desconhecido: ${id}` }, 400);
+      }
+      try {
+        const projeto = carregarProjeto(id);
+        return json(res, { roteiros: listarRoteiros(projeto.dirPlaywright) });
+      } catch (e) {
+        return json(res, { erro: e.message }, 400);
+      }
     }
 
     if (url.pathname.startsWith('/painel/')) {

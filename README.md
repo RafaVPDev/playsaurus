@@ -146,7 +146,7 @@ Estas falhas não geram mensagem de erro — tudo aparenta funcionar:
 | Armadilha | Sintoma | Correção |
 |---|---|---|
 | **Status 200 enganoso** | Toda rota responde 200 porque o SPA devolve o `index.html` do app | Validar por **conteúdo** (título) e por arquivo com extensão (`/docs/sitemap.xml`) |
-| **Barra final ausente** | `/docs/secao/artigo` cai no 404 do app; `/docs/secao/artigo/` funciona | `trailingSlash: true` e todos os links construídos com barra |
+| **Rota da documentação cai no SPA** | No localhost abre, mas em produção `/docs/secao/artigo/` devolve o app ou uma página vazia | A Central de Ajuda deve usar a `url` do `help-index.json` sem alterá-la; ela aponta para `/docs/secao/artigo/index.html` |
 | **Servidor de desenvolvimento do app** | `/docs` não abre no `npm run dev` do app | Testar com o build do projeto, ou com `npm run serve -- <id>` aqui |
 | **Publicação não propagada** | O commit existe, mas o site não mudou | Conferir a publicação na plataforma de hospedagem antes de investigar o código |
 | **Links relativos a diretórios** | Com `trailingSlash`, links como `../secao/` resolvem errado | Apontar para o arquivo: `../secao/index.mdx` |
