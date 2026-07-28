@@ -40,7 +40,8 @@ id pode ser omitido.
 | `npm run build -- meu-projeto` | Gera o site em `build/meu-projeto` |
 | `npm run serve -- meu-projeto` | Serve o build como um servidor estático serviria |
 | `npm run screenshots -- meu-projeto` | Captura as telas do projeto (precisa do app rodando) |
-| `npm run videos -- meu-projeto` | Grava o vídeo-tutorial de jornada em `static/videos/` (precisa do app rodando) |
+| `npm run videos -- meu-projeto` | Grava todos os roteiros em `static/videos/`, preservando as subpastas (precisa do app rodando) |
+| `npm run videos -- meu-projeto tutoriais-rapidos/central-ajuda.jornada.spec.ts` | Grava somente o roteiro informado |
 | `npm run publish -- meu-projeto` | Build + cópia para o repositório do projeto + índice da Ajuda |
 
 ## Estrutura
@@ -59,6 +60,17 @@ captura, os scripts e os padrões editoriais.
 **Por projeto:** os artigos, a marca e as cores, a `baseUrl`, as credenciais e —
 o que costuma surpreender — os **specs de screenshot**, porque rotas e seletores
 são de cada projeto.
+
+Os vídeos seguem a organização dos roteiros. Por exemplo:
+
+```text
+projetos/meu-projeto/playwright/tutoriais-rapidos/central-ajuda.jornada.spec.ts
+  -> projetos/meu-projeto/static/videos/tutoriais-rapidos/central-ajuda.webm
+```
+
+Cada arquivo de jornada deve conter um único `test(...)`, pois cada roteiro gera
+um vídeo final. Para gravar só um tutorial, informe seu caminho relativo à pasta
+`playwright/` no comando.
 
 > Resista a subir para `compartilhado/` algo que só serve a um projeto. Os specs
 > de screenshot são o caso mais tentador e o mais errado.

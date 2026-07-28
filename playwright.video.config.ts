@@ -12,7 +12,8 @@ const { projetoAtivo } = require('./compartilhado/projeto.cjs');
  * - roda mais devagar (slowMo) para o vídeo ficar assistível;
  * - só executa os arquivos *.jornada.spec.ts, ignorando os screenshots.
  *
- * Rodar com: npm run videos -- <projeto>
+ * Rodar todos: npm run videos -- <projeto>
+ * Rodar um: npm run videos -- <projeto> <pasta/roteiro.jornada.spec.ts>
  */
 const projeto = projetoAtivo();
 
@@ -25,6 +26,7 @@ const VIEWPORT = { width: 1440, height: 900 };
 
 export default defineConfig({
   testDir: projeto.dirPlaywright,
+  outputDir: process.env.PLAYSAURUS_VIDEO_RESULTADOS || 'test-results',
   fullyParallel: false,
   forbidOnly: !!process.env.CI,
   retries: 0,
@@ -50,7 +52,8 @@ export default defineConfig({
         ...devices['Desktop Chrome'],
         viewport: VIEWPORT,
         storageState: projeto.arquivoAuth,
-        // Grava vídeo de cada teste; o spec salva a versão final em static/videos/.
+        // O runner copia o resultado final para static/videos/ depois que o
+        // contexto fecha e o Playwright termina de gravar o arquivo.
         video: { mode: 'on', size: VIEWPORT },
         launchOptions: {
           // Sem slowMo: ele multiplicava cada tecla digitada e cada ação, e uma

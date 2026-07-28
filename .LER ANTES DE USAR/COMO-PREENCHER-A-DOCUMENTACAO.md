@@ -351,6 +351,262 @@ automações do projeto dentro do Playsaurus. Não altere o código do produto.
 Ao final: npm run build -- <id>
 ```
 
+### Prompt 7 — Integrar a documentação à Central de Ajuda
+```
+Integre a documentação publicada de <PRODUTO> à Central de Ajuda do próprio
+sistema. A documentação deve ser a única fonte dos artigos pesquisáveis e das
+Perguntas Frequentes exibidas nessa tela.
+
+Antes de alterar qualquer arquivo:
+- analise a arquitetura, as rotas, o layout e o design system reais do produto;
+- localize a tela, rota ou componente de Ajuda, caso já exista;
+- confira como `public/docs` é servido em desenvolvimento e produção;
+- procure por `public/docs/help-index.json` e analise seu schema real;
+- identifique como o perfil do usuário autenticado é representado no sistema;
+- preserve recursos e destinos úteis que já existirem na área de Ajuda.
+
+Não presuma framework, nomes de componentes, rotas ou bibliotecas. Adapte a
+solução aos padrões existentes. Não altere o conteúdo-fonte da documentação
+apenas para simplificar a implementação da tela.
+
+## Conteúdo permitido
+
+A pesquisa pode usar somente conteúdo destinado ao uso do produto:
+- Usabilidade;
+- Referência funcional;
+- Perguntas Frequentes.
+
+Nunca indexe ou exiba:
+- Arquitetura para desenvolvedores;
+- banco de dados, APIs, componentes ou detalhes de implementação;
+- relatórios de cobertura;
+- auditorias, evidências, inferências ou lacunas técnicas;
+- arquivos internos ou materiais que não façam parte da ajuda ao usuário.
+
+Respeite o público definido no frontmatter ou no índice:
+- conteúdo `publico: todos` pode aparecer para qualquer usuário;
+- conteúdo `publico: admin` só pode aparecer para perfis administrativos reais;
+- categorias listadas em `faq_admin` seguem a mesma restrição.
+
+Não confie apenas na interface para ocultar conteúdo restrito. Filtre os dados
+antes de montar FAQs e resultados.
+
+## Criar ou adaptar a tela
+
+Se já existir uma Central de Ajuda:
+- preserve a rota, identidade visual, estrutura geral e recursos existentes;
+- mantenha os destinos atuais dos quatro cards, quando já estiverem definidos;
+- substitua FAQs ou artigos hardcoded pela leitura da documentação;
+- adicione ou ajuste o campo de pesquisa conforme este prompt.
+
+Se a tela não existir:
+- crie uma rota de Ajuda integrada ao layout autenticado do sistema;
+- adicione o acesso no menu apropriado;
+- implemente os quatro cards e o painel de conteúdo descritos abaixo;
+- use os componentes, ícones, cores, tipografia e padrões de acessibilidade do
+  próprio projeto.
+
+Não crie uma página visualmente desconectada do restante do sistema.
+
+## Modelo visual obrigatório
+
+A tela deve seguir esta composição:
+
+1. Cabeçalho:
+   - título “Central de ajuda”;
+   - subtítulo curto explicando que o usuário pode encontrar respostas e
+     orientações sobre o sistema.
+
+2. Primeira linha com quatro cards:
+   - Guia rápido;
+   - Vídeo tutoriais;
+   - Fale conosco;
+   - Base de conhecimento.
+
+Cada card deve ter ícone, título, descrição curta e ação correspondente.
+Preserve os destinos e comportamentos já existentes. Se algum destino ainda não
+estiver implementado, não invente URL externa: mantenha a apresentação coerente
+com o produto e registre a pendência no resumo final.
+
+3. Abaixo dos cards, um único painel principal:
+   - cabeçalho do painel com título à esquerda;
+   - campo de pesquisa alinhado à direita no desktop;
+   - conteúdo abaixo em largura total;
+   - cantos arredondados, borda suave e espaçamento consistente com o sistema.
+
+4. Aparência:
+   - fundo claro e limpo;
+   - cards com bordas suaves, cantos arredondados e sombra discreta;
+   - hierarquia visual clara;
+   - cores, tipografia, ícones e estados derivados do design system real;
+   - no mobile, cards empilhados ou em grade adequada e pesquisa em largura
+     total, sem rolagem horizontal.
+
+Use como referência de composição uma Central de Ajuda com quatro cards no topo
+e FAQ/pesquisa no painel inferior. Não copie cores ou componentes de outro
+produto.
+
+## Estado sem pesquisa
+
+Quando o campo estiver vazio:
+- mantenha visíveis o cabeçalho e os quatro cards superiores;
+- use o título “Perguntas frequentes” no painel principal;
+- mostre somente as perguntas e respostas em formato accordion;
+- carregue as perguntas da página de Perguntas Frequentes da documentação,
+  preferencialmente `referencia/perguntas-frequentes`;
+- respeite as categorias comuns e administrativas definidas na documentação;
+- permita abrir e fechar cada pergunta sem navegar para outra página.
+
+Neste estado, NÃO mostre:
+- lista de artigos;
+- cards de documentação;
+- categorias da documentação;
+- sugestões de leitura;
+- conteúdos relacionados;
+- resultados de pesquisa;
+- links genéricos para todas as páginas.
+
+As respostas do accordion vêm da documentação, mas isso não deve criar uma
+segunda seção visível de documentação. Se não houver uma página de Perguntas
+Frequentes, não invente perguntas: mostre um estado vazio adequado e informe a
+ausência no resumo final.
+
+## Estado com pesquisa
+
+Considere que existe pesquisa quando o valor normalizado do campo contém pelo
+menos um caractere útil. Nesse estado:
+- mantenha visíveis o cabeçalho e os quatro cards superiores;
+- oculte completamente o accordion de Perguntas Frequentes;
+- altere o título do painel para “Resultados da busca”;
+- pesquise somente em Usabilidade e Referência;
+- exclua Arquitetura e materiais internos mesmo quando o termo coincidir;
+- aplique o filtro de público antes de exibir os resultados;
+- mostre somente os resultados correspondentes ao termo pesquisado.
+
+Cada resultado deve apresentar:
+- título;
+- seção ou categoria;
+- pequeno trecho relacionado à busca;
+- indicação visual de que será aberto em outra página.
+
+Ao clicar, abra a página exata da documentação em uma nova aba. Em links HTML ou
+React, use o equivalente a:
+
+target="_blank"
+rel="noopener noreferrer"
+
+Não apresente o conteúdo completo do artigo dentro da Central de Ajuda.
+
+Quando não houver correspondência, mostre um estado claro de “Nenhum resultado
+encontrado”, sem voltar automaticamente ao FAQ e sem sugerir artigos aleatórios.
+Ao limpar o campo, restaure imediatamente o estado “Perguntas frequentes”.
+
+## Regras da pesquisa
+
+- Ignore diferenças entre maiúsculas e minúsculas.
+- Normalize acentos: “configuracao” deve encontrar “Configuração”.
+- Considere título, subtítulos, palavras-chave, resumo e conteúdo pesquisável.
+- Dê mais peso a correspondências no título e nos subtítulos.
+- Ordene os resultados por relevância.
+- Destaque ou selecione um trecho relacionado sem inserir HTML inseguro.
+- Limite a quantidade inicial de resultados para manter a tela legível.
+- Evite buscas desnecessárias para um campo vazio.
+- Se a busca for assíncrona, trate carregamento, erro e respostas fora de ordem.
+- Preserve navegação por teclado, foco visível, labels e atributos de
+  acessibilidade.
+
+## Fonte dos dados
+
+Use `public/docs/help-index.json` quando ele já existir. Antes de criar outro
+mecanismo:
+1. confira o arquivo;
+2. analise seu schema real;
+3. confirme se ele contém URLs, títulos, seção, headings, resumo, conteúdo
+   pesquisável, público e FAQs;
+4. confirme que Arquitetura e conteúdos internos foram excluídos;
+5. reaproveite o índice existente sempre que ele atender ao fluxo.
+
+Não duplique manualmente no frontend os textos dos artigos ou das Perguntas
+Frequentes. A documentação é a fonte de verdade.
+
+Se o índice não existir ou não tiver os campos necessários:
+- ajuste ou crie o gerador no fluxo de documentação;
+- prefira gerar a partir dos arquivos Markdown/MDX quando estiverem disponíveis;
+- se apenas o build existir, extraia os dados do HTML em `public/docs`;
+- não adicione dependências quando os recursos atuais forem suficientes;
+- produza URLs compatíveis com as rotas reais do Docusaurus;
+- normalize URLs e fragmentos em Unicode NFC para âncoras com acentos;
+- exclua explicitamente Arquitetura, relatórios e materiais internos;
+- inclua informações de público necessárias à filtragem;
+- extraia o FAQ mantendo categorias, perguntas, respostas, âncoras e restrições;
+- adicione um comando claro ao `package.json`, como `build:help-index`;
+- integre a regeneração ao fluxo de publicação da documentação;
+- mantenha o índice no projeto quando a produção depender dele como arquivo
+  estático.
+
+Se o índice atual incluir Arquitetura, corrija o gerador. Não filtre apenas
+depois que dados técnicos já tiverem sido enviados ou incorporados à tela.
+
+## URLs e ambientes
+
+Não fixe domínio, porta ou origem. Monte os links a partir do caminho base real
+da documentação, normalmente `/docs/`, respeitando a configuração do produto.
+
+Teste no mínimo:
+- `/docs/`;
+- uma página de Usabilidade;
+- uma página de Referência;
+- uma âncora de Pergunta Frequente;
+- `/docs/help-index.json`.
+
+Confirme que URLs de página com barra final resolvem para o `index.html`
+correspondente.
+
+Se, somente em desenvolvimento, `/docs/<pagina>/` cair no roteador do aplicativo
+e retornar 404:
+- faça uma correção restrita ao servidor de desenvolvimento;
+- resolva `/docs/**/` para o `index.html` correspondente;
+- não intercepte arquivos com extensão, assets, imagens ou `help-index.json`;
+- não modifique produção quando a hospedagem já resolver diretórios.
+
+Se o problema também existir em produção, ajuste o servidor ou a hospedagem
+apenas para `/docs/**`. Não esconda links quebrados e não redirecione toda URL
+desconhecida para uma única página.
+
+## Validação obrigatória
+
+Antes de concluir:
+- gere ou atualize `help-index.json`;
+- rode lint, verificação de tipos e build do sistema;
+- confirme que o estado inicial mostra somente quatro cards e FAQ;
+- confirme que nenhum artigo aparece com a pesquisa vazia;
+- confirme que, ao pesquisar, o FAQ desaparece;
+- teste pesquisas com e sem acentos;
+- teste correspondências no título, subtítulo e corpo;
+- confirme que nenhum conteúdo de Arquitetura aparece;
+- teste a filtragem de conteúdo comum e administrativo;
+- confirme que FAQs e resultados vêm da documentação, sem listas duplicadas;
+- valide todas as URLs e âncoras presentes no índice;
+- confirme que cada resultado abre a documentação em uma nova aba;
+- teste carregamento, erro e nenhum resultado;
+- teste teclado, foco e leitor de tela nos controles principais;
+- teste desktop e mobile;
+- teste os links em desenvolvimento e na forma real de publicação.
+
+Ao finalizar, informe:
+- arquivos criados e alterados;
+- se a tela de Ajuda foi criada ou adaptada;
+- origem e comando de geração do índice;
+- seções incluídas e excluídas;
+- quantidade de artigos e perguntas indexadas;
+- comportamento aplicado a conteúdos administrativos;
+- testes executados;
+- destinos ausentes nos cards e outras limitações encontradas.
+
+Não altere outras funcionalidades do produto e não substitua conteúdo dinâmico
+da documentação por textos hardcoded apenas para fazer a tela parecer pronta.
+```
+
 ### Prompt EXTRA — Atualizar a doc quando entra uma funcionalidade nova
 ```
 Uma funcionalidade nova/alterada entrou em <PRODUTO>: <DESCREVA a mudança e/ou
@@ -376,7 +632,7 @@ inferências ou lacunas. Ao final: npm run build -- <id>
 
 ---
 
-Ordem recomendada para uma documentação nova: **1 → 2 → 3 → 4 → 5 → 6**.
+Ordem recomendada para uma documentação nova: **1 → 2 → 3 → 4 → 5 → 6 → 7**.
 Em uma documentação já preenchida, use o **4A** sempre que Usabilidade ou
 Referência estiverem técnicas demais. Fazer o inventário técnico (1) antes de
 escrever reduz muito o risco de uma documentação bonita, porém diferente do

@@ -1,10 +1,16 @@
 /**
  * Grava os vídeos de jornada de um produto.
  *
- * Uso: npm run videos -- meu-projeto
+ * Uso:
+ *   npm run videos -- meu-projeto
+ *   npm run videos -- meu-projeto tutoriais-rapidos/central-ajuda.jornada.spec.ts
  *
- * Percorre os specs *.jornada.spec.ts com a config de vídeo (playwright.video.config.ts)
- * e salva o resultado em projetos/<id>/static/videos/.
+ * Sem um roteiro, percorre recursivamente todos os specs *.jornada.spec.ts.
+ * Com um roteiro, executa somente ele. A estrutura sob playwright/ é preservada
+ * em static/videos/:
+ *
+ * playwright/tutoriais-rapidos/central-ajuda.jornada.spec.ts
+ *   -> static/videos/tutoriais-rapidos/central-ajuda.webm
  *
  * O vídeo é copiado de test-results/ DEPOIS do teste passar — não dentro do
  * teste: `page.video().saveAs()` durante o teste trava até a página fechar.
@@ -12,29 +18,69 @@
  * Requer o app rodando na URL base do projeto e projetos/<id>/.env preenchido
  * com as credenciais da conta de demonstração (a mesma dos screenshots).
  */
-import { existsSync, mkdirSync, readdirSync, statSync, copyFileSync } from 'node:fs';
+import { copyFileSync, existsSync, mkdirSync, readdirSync, rmSync } from 'node:fs';
 import path from 'node:path';
 import { BIN, RAIZ, carregarProjeto, executar, idDoArgumento, encerrarComErro } from './comum.mjs';
 
-/** Procura recursivamente os .webm gerados, do mais recente para o mais antigo. */
-function videosGerados(dir) {
+const SUFIXO_JORNADA = '.jornada.spec.ts';
+
+/** Procura arquivos recursivamente, em ordem estável. */
+function arquivosRecursivos(dir, aceitar) {
   const achados = [];
   const varrer = (d) => {
     if (!existsSync(d)) return;
-    for (const entry of readdirSync(d, { withFileTypes: true })) {
+    for (const entry of readdirSync(d, { withFileTypes: true }).sort((a, b) =>
+      a.name.localeCompare(b.name),
+    )) {
       const p = path.join(d, entry.name);
       if (entry.isDirectory()) varrer(p);
-      else if (entry.name.endsWith('.webm')) achados.push({ p, mtime: statSync(p).mtimeMs });
+      else if (aceitar(entry.name)) achados.push(p);
     }
   };
   varrer(dir);
-  return achados.sort((a, b) => b.mtime - a.mtime).map((x) => x.p);
+  return achados;
+}
+
+function caminhoDentro(base, relativo) {
+  const resolvido = path.resolve(base, relativo);
+  const distancia = path.relative(base, resolvido);
+  if (!distancia || distancia.startsWith('..') || path.isAbsolute(distancia)) {
+    throw new Error(`Caminho de roteiro inválido: ${relativo}`);
+  }
+  return resolvido;
+}
+
+/** Resolve um roteiro informado em relação à pasta playwright/ do produto. */
+function resolverRoteiro(dirPlaywright, informado) {
+  let relativo = informado.replaceAll('\\', '/').replace(/^\.?\//, '');
+  if (relativo.startsWith('playwright/')) relativo = relativo.slice('playwright/'.length);
+  if (!relativo.endsWith(SUFIXO_JORNADA)) relativo += SUFIXO_JORNADA;
+
+  const arquivo = caminhoDentro(dirPlaywright, relativo);
+  if (!existsSync(arquivo)) {
+    throw new Error(
+      `Roteiro não encontrado: ${path.join('playwright', relativo)}\n` +
+        `Informe o caminho relativo à pasta playwright/.`,
+    );
+  }
+  return arquivo;
+}
+
+function destinoDoRoteiro(projeto, roteiro) {
+  const relativo = path.relative(projeto.dirPlaywright, roteiro);
+  const semSufixo = relativo.slice(0, -SUFIXO_JORNADA.length);
+  return path.join(projeto.dirStatic, 'videos', `${semSufixo}.webm`);
 }
 
 try {
   const argv = process.argv.slice(2);
   const id = idDoArgumento(argv);
   const projeto = carregarProjeto(id);
+  const indiceId = argv.indexOf(id);
+  const depoisDoId = indiceId >= 0 ? argv.slice(indiceId + 1) : argv;
+  const roteiroInformado =
+    depoisDoId[0] && !depoisDoId[0].startsWith('-') ? depoisDoId.shift() : null;
+  const extras = depoisDoId;
 
   if (!existsSync(projeto.arquivoEnv)) {
     throw new Error(
@@ -43,28 +89,62 @@ try {
     );
   }
 
-  const dirVideos = path.join(projeto.dirStatic, 'videos');
-  mkdirSync(dirVideos, { recursive: true });
-
   const config = path.join(RAIZ, 'playwright.video.config.ts');
-  const resultados = path.join(RAIZ, 'test-results');
-  const extras = argv.filter((a) => a.startsWith('-'));
+  const dirResultados = path.join(RAIZ, 'test-results', 'videos', id);
+  const roteiros = roteiroInformado
+    ? [resolverRoteiro(projeto.dirPlaywright, roteiroInformado)]
+    : arquivosRecursivos(projeto.dirPlaywright, (nome) => nome.endsWith(SUFIXO_JORNADA));
+
+  if (!roteiros.length) {
+    throw new Error(`Nenhum roteiro *${SUFIXO_JORNADA} encontrado em projetos/${id}/playwright/.`);
+  }
 
   console.log(`Gravando vídeos de jornada do ${projeto.nome} (${id})...`);
+  console.log(
+    roteiroInformado
+      ? `Roteiro: ${path.relative(projeto.dirPlaywright, roteiros[0])}`
+      : `${roteiros.length} roteiro(s) encontrado(s).`,
+  );
   console.log('O navegador vai abrir e percorrer o fluxo. Não mexa até terminar.\n');
-  await executar(process.execPath, [BIN.playwright, 'test', '--config', config, ...extras], {
-    env: { DOC_PROJETO: id },
-  });
 
-  // Copia o vídeo mais recente de test-results/ para o destino, com nome estável.
-  const gerados = videosGerados(resultados);
-  if (!gerados.length) {
-    throw new Error('O teste passou, mas nenhum vídeo foi encontrado em test-results/.');
+  for (const [indice, roteiro] of roteiros.entries()) {
+    const relativo = path.relative(projeto.dirPlaywright, roteiro);
+    const resultadosDaExecucao = path.join(dirResultados, String(indice + 1));
+    rmSync(resultadosDaExecucao, { recursive: true, force: true });
+
+    console.log(`[${indice + 1}/${roteiros.length}] ${relativo}`);
+    await executar(
+      process.execPath,
+      [
+        BIN.playwright,
+        'test',
+        '--config',
+        config,
+        path.relative(RAIZ, roteiro).split(path.sep).join('/'),
+        ...extras,
+      ],
+      {
+        env: {
+          DOC_PROJETO: id,
+          PLAYSAURUS_VIDEO_RESULTADOS: resultadosDaExecucao,
+        },
+      },
+    );
+
+    const gerados = arquivosRecursivos(resultadosDaExecucao, (nome) => nome.endsWith('.webm'));
+    if (gerados.length !== 1) {
+      throw new Error(
+        gerados.length === 0
+          ? `O roteiro passou, mas nenhum vídeo foi encontrado: ${relativo}`
+          : `O roteiro gerou ${gerados.length} vídeos. Mantenha um único test(...) por arquivo: ${relativo}`,
+      );
+    }
+
+    const destino = destinoDoRoteiro(projeto, roteiro);
+    mkdirSync(path.dirname(destino), { recursive: true });
+    copyFileSync(gerados[0], destino);
+    console.log(`Vídeo salvo em ${path.relative(RAIZ, destino)}\n`);
   }
-  const destino = path.join(dirVideos, 'jornada-projeto.webm');
-  copyFileSync(gerados[0], destino);
-
-  console.log(`\nVídeo salvo em ${path.relative(RAIZ, destino)}`);
 } catch (e) {
   encerrarComErro(e);
 }
