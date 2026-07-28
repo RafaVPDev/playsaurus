@@ -12,11 +12,13 @@
  */
 import { readFileSync, writeFileSync, readdirSync, existsSync, mkdirSync } from 'node:fs';
 import path from 'node:path';
-import { carregarProjeto, destinoPublicacao, idDoArgumento, encerrarComErro } from './comum.mjs';
+import { carregarProjeto, aplicarModo, destinoPublicacao, idDoArgumento, encerrarComErro } from './comum.mjs';
 
 try {
   const id = idDoArgumento();
-  const projeto = carregarProjeto(id);
+  // Aplica o modo (DOC_MODO): no público, as seções internas saem de `secoes` e o
+  // índice ignora seus artigos — a busca da Central de Ajuda não os revela.
+  const projeto = aplicarModo(carregarProjeto(id));
   const { destino } = destinoPublicacao(projeto);
 
   const contentDir = projeto.dirDocs;
@@ -26,7 +28,7 @@ try {
   // Sem a barra final: as URLs são montadas como `${BASE_URL}/secao/...`.
   const BASE_URL = projeto.baseUrl.replace(/\/+$/, '') || '';
   const SECOES = Object.fromEntries(projeto.secoes.map((s) => [s.id, s.rotulo]));
-  const arquivoFaq = projeto.indiceAjuda?.faqArquivo ?? null;
+  const arquivoFaqConfigurado = projeto.indiceAjuda?.faqArquivo ?? null;
 
   // -------------------------------------------------------------- utilidades
 
@@ -37,6 +39,24 @@ try {
       else if (/\.(md|mdx)$/.test(entry.name)) out.push(p);
     }
     return out;
+  }
+
+  /**
+   * Usa o caminho configurado quando existir. Sem configuração, encontra uma
+   * página chamada "perguntas-frequentes" e prioriza a seção de Referência.
+   */
+  function localizarArquivoFaq(arquivos) {
+    if (arquivoFaqConfigurado) return arquivoFaqConfigurado;
+
+    const candidatos = arquivos
+      .map((arquivo) => path.relative(contentDir, arquivo).split(path.sep).join('/'))
+      .filter((relativo) => /(^|\/)(?:\d+-)?perguntas-frequentes\.(?:md|mdx)$/i.test(relativo))
+      .sort((a, b) => {
+        const prioridade = (relativo) => relativo.startsWith('referencia/') ? 0 : 1;
+        return prioridade(a) - prioridade(b) || a.localeCompare(b);
+      });
+
+    return candidatos[0] ?? null;
   }
 
   /** Frontmatter simples (chave: valor e listas com "- item"). */
@@ -108,13 +128,17 @@ try {
   let faqs = [];
   const avisos = [];
   const sitemap = urlsDoSitemap();
+  const arquivos = listarArquivos(contentDir);
+  const arquivoFaq = localizarArquivoFaq(arquivos);
 
-  for (const arquivo of listarArquivos(contentDir)) {
+  for (const arquivo of arquivos) {
     const relativo = path.relative(contentDir, arquivo).split(path.sep).join('/');
     const bruto = readFileSync(arquivo, 'utf8');
     const { dados, corpo } = lerFrontmatter(bruto);
 
     const secaoId = relativo.split('/')[0];
+    // Seção interna (fora de `secoes` no modo público): não entra no índice.
+    if (!(secaoId in SECOES)) continue;
     const url = urlDoArquivo(relativo);
     if (sitemap && !sitemap.has(semBarra(url))) {
       avisos.push(`URL fora do sitemap: ${url} (${relativo})`);

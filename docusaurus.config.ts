@@ -69,6 +69,17 @@ const config: Config = {
           // Com routeBasePath '/', as seções ficam em /docs/arquitetura,
           // /docs/usabilidade etc. (em vez de /docs/docs/...).
           routeBasePath: '/',
+          // No modo público, as seções internas (projetoAtivo já as tirou de
+          // `secoes`) também têm as páginas removidas do build — senão elas
+          // continuariam acessíveis pela URL e no sitemap. Os defaults do plugin
+          // são repetidos aqui porque `exclude` substitui, não acrescenta.
+          exclude: [
+            '**/_*.{js,jsx,ts,tsx,md,mdx}',
+            '**/_*/**',
+            '**/*.test.{js,jsx,ts,tsx}',
+            '**/__tests__/**',
+            ...((projeto.excluidas as string[] | undefined) ?? []).map((secao) => `${secao}/**`),
+          ],
           // Sem `editUrl`: o link "editar esta página" apontaria para o repositório
           // da documentação, não para o do produto.
         },

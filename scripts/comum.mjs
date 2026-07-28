@@ -8,8 +8,14 @@ import { createRequire } from 'node:module';
 const require = createRequire(import.meta.url);
 const projetos = require('../compartilhado/projeto.cjs');
 
-export const { RAIZ, listarProjetos, carregarProjeto, destinoPublicacao, resolverRepositorio } =
-  projetos;
+export const {
+  RAIZ,
+  listarProjetos,
+  carregarProjeto,
+  aplicarModo,
+  destinoPublicacao,
+  resolverRepositorio,
+} = projetos;
 
 /**
  * Descobre o projeto alvo: argumento da linha de comando, DOC_PROJETO ou —

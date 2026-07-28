@@ -14,14 +14,18 @@ try {
   const id = idDoArgumento();
   const projeto = carregarProjeto(id);
 
-  if (!existsSync(projeto.dirBuild)) {
-    throw new Error(`Build não encontrado em build/${id}.\nRode \`npm run build -- ${id}\` antes.`);
+  const modo = process.env.DOC_MODO === 'publico' ? 'publico' : 'interno';
+  const dir = modo === 'publico' ? projeto.dirBuildCliente : projeto.dirBuild;
+
+  if (!existsSync(dir)) {
+    const comando = modo === 'publico' ? `DOC_MODO=publico npm run build -- ${id}` : `npm run build -- ${id}`;
+    throw new Error(`Build não encontrado em ${path.relative(RAIZ, dir)}.\nRode \`${comando}\` antes.`);
   }
 
   await executar(
     process.execPath,
-    [BIN.docusaurus, 'serve', '--dir', path.relative(RAIZ, projeto.dirBuild)],
-    { env: { DOC_PROJETO: id } },
+    [BIN.docusaurus, 'serve', '--dir', path.relative(RAIZ, dir)],
+    { env: { DOC_PROJETO: id, DOC_MODO: modo } },
   );
 } catch (e) {
   encerrarComErro(e);

@@ -49,22 +49,29 @@ try {
     );
   }
 
-  await executar(process.execPath, [path.join(aqui, 'build.mjs'), id]);
+  // Publica sempre a versão PÚBLICA: as seções marcadas com "publicar": false no
+  // projeto.json (ex.: a Arquitetura) ficam de fora do que vai para o cliente.
+  await executar(process.execPath, [path.join(aqui, 'build.mjs'), id], {
+    env: { DOC_MODO: 'publico' },
+  });
 
-  if (!existsSync(projeto.dirBuild)) {
-    throw new Error(`Build não encontrado em build/${id} depois de gerar.`);
+  if (!existsSync(projeto.dirBuildCliente)) {
+    throw new Error(`Build público não encontrado em ${path.relative(RAIZ, projeto.dirBuildCliente)} depois de gerar.`);
   }
 
   // Limpa a versão anterior para não deixar arquivos órfãos de builds antigos.
   console.log(`\nSubstituindo ${path.relative(repositorio, destino)}...`);
   await rm(destino, { recursive: true, force: true });
   await mkdir(destino, { recursive: true });
-  await cp(projeto.dirBuild, destino, { recursive: true });
+  await cp(projeto.dirBuildCliente, destino, { recursive: true });
 
-  if (projeto.indiceAjuda?.gerar) {
-    console.log('');
-    await executar(process.execPath, [path.join(aqui, 'gerar-indice-ajuda.mjs'), id]);
-  }
+  // O índice faz parte do artefato publicado. Gerá-lo sempre evita que a limpeza
+  // de public/docs apague o arquivo usado pela Central de Ajuda. Produtos que
+  // ainda não consomem o índice apenas mantêm um JSON estático sem efeito.
+  console.log('');
+  await executar(process.execPath, [path.join(aqui, 'gerar-indice-ajuda.mjs'), id], {
+    env: { DOC_MODO: 'publico' },
+  });
 
   console.log(`\nDocumentação publicada em ${path.relative(RAIZ, destino)}`);
   console.log(`Falta o último passo, manual: publicar o ${projeto.nome} pela plataforma de hospedagem.`);

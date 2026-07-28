@@ -400,9 +400,9 @@ function criarProjeto({ id, nome, url, baseUrl, repositorio, destino, cor, secoe
         titulo: `Documentação do ${nome}`,
         acaoPrincipal: { rotulo: `Ver ${secoesFinais[0].rotulo}`, para: `/${secoesFinais[0].id}` },
       },
-      // O índice da Central de Ajuda é consumido pelo app do produto. Só faz
-      // sentido quando o app tiver essa tela — por isso nasce desligado.
-      indiceAjuda: { gerar: false },
+      // O publish sempre gera help-index.json. Se houver uma página chamada
+      // perguntas-frequentes.md/.mdx, ela é localizada automaticamente.
+      indiceAjuda: {},
     };
 
     escrever('projeto.json', `${JSON.stringify(projeto, null, 2)}\n`);

@@ -32,6 +32,7 @@ const {
   salvarCaminhoLocal,
   lerPastaBase,
   salvarPastaBase,
+  definirPublicacaoSecao,
 } = require('../compartilhado/projeto.cjs');
 const {
   SECOES_PADRAO,
@@ -100,10 +101,15 @@ function pararPreview() {
 }
 
 /** Sobe (ou re-sobe) a pré-visualização de um projeto e devolve a URL. */
-async function iniciarPreview(id) {
+async function iniciarPreview(id, modo = 'interno') {
   const projeto = carregarProjeto(id);
-  if (!existsSync(projeto.dirBuild)) {
-    const e = new Error(`Gere o build de ${id} antes de visualizar.`);
+  const dir = modo === 'publico' ? projeto.dirBuildCliente : projeto.dirBuild;
+  if (!existsSync(dir)) {
+    const comoGerar =
+      modo === 'publico'
+        ? `Gere a versão do cliente de ${id} antes de visualizar.`
+        : `Gere o build de ${id} antes de visualizar.`;
+    const e = new Error(comoGerar);
     e.status = 400;
     throw e;
   }
@@ -113,12 +119,12 @@ async function iniciarPreview(id) {
   const port = await portaLivre();
   const proc = spawn(
     process.execPath,
-    [bin, 'serve', '--dir', path.relative(RAIZ, projeto.dirBuild), '-p', String(port), '-h', HOST, '--no-open'],
-    { cwd: RAIZ, env: { ...process.env, DOC_PROJETO: id, FORCE_COLOR: '0' } },
+    [bin, 'serve', '--dir', path.relative(RAIZ, dir), '-p', String(port), '-h', HOST, '--no-open'],
+    { cwd: RAIZ, env: { ...process.env, DOC_PROJETO: id, DOC_MODO: modo, FORCE_COLOR: '0' } },
   );
 
   // `baseUrl` já vem com barra final (validada no carregamento).
-  const atual = { proc, id, port, url: `http://${HOST}:${port}${projeto.baseUrl}` };
+  const atual = { proc, id, modo, port, url: `http://${HOST}:${port}${projeto.baseUrl}` };
   preview = atual;
   const limpar = () => {
     if (preview === atual) preview = null;
@@ -146,6 +152,10 @@ function estadoDosProjetos() {
         ? path.resolve(RAIZ, projeto.repositorio.relativo)
         : null;
 
+      // A Arquitetura é a única seção com publicação opcional (interna). Se o
+      // projeto a tiver, o painel mostra o check; `null` esconde o controle.
+      const arquitetura = projeto.secoes.find((s) => s.id === 'arquitetura');
+
       return {
         id,
         nome: projeto.nome,
@@ -153,6 +163,7 @@ function estadoDosProjetos() {
         baseUrl: projeto.baseUrl,
         url: projeto.url,
         secoes: projeto.secoes.map((s) => s.rotulo),
+        arquiteturaPublicar: arquitetura ? arquitetura.publicar !== false : null,
         destino: projeto.repositorio?.destino ?? 'public/docs',
         env: projeto.repositorio?.env ?? null,
         caminho: repo.caminho,
@@ -163,6 +174,7 @@ function estadoDosProjetos() {
         existe: repo.caminho ? existsSync(repo.caminho) : false,
         temEnv: existsSync(projeto.arquivoEnv),
         temBuild: existsSync(projeto.dirBuild),
+        temBuildCliente: existsSync(projeto.dirBuildCliente),
       };
     } catch (e) {
       return { id, erro: e.message };
@@ -198,7 +210,7 @@ async function lerCorpo(req, limite = 64 * 1024) {
 // ------------------------------------------------------------------ execução
 
 /** Roda um script de scripts/ repassando a saída por Server-Sent Events. */
-function executarComStream(res, acao, id) {
+function executarComStream(res, acao, id, modo) {
   const { script, titulo } = ACOES[acao];
 
   // Uma pré-visualização do mesmo projeto segura os arquivos de build/<id>; no
@@ -221,11 +233,12 @@ function executarComStream(res, acao, id) {
   }
 
   emExecucao = `${acao}/${id}`;
-  enviar('inicio', { titulo: `${titulo} — ${id}` });
+  const sufixo = modo === 'publico' ? ' (cliente)' : '';
+  enviar('inicio', { titulo: `${titulo}${sufixo} — ${id}` });
 
   const filho = spawn(process.execPath, [path.join(aqui, script), id], {
     cwd: RAIZ,
-    env: { ...process.env, FORCE_COLOR: '0' },
+    env: { ...process.env, FORCE_COLOR: '0', ...(modo ? { DOC_MODO: modo } : {}) },
   });
 
   const repassar = (fluxo) => {
@@ -309,7 +322,7 @@ const servidor = createServer(async (req, res) => {
         raiz: RAIZ,
         pastaBase: lerPastaBase(),
         secoesPadrao: SECOES_PADRAO,
-        preview: preview ? { id: preview.id, url: preview.url } : null,
+        preview: preview ? { id: preview.id, modo: preview.modo, url: preview.url } : null,
       });
     }
 
@@ -360,15 +373,29 @@ const servidor = createServer(async (req, res) => {
     }
 
     if (url.pathname === '/api/visualizar' && req.method === 'POST') {
-      const { id } = await lerCorpo(req);
+      const { id, modo } = await lerCorpo(req);
       if (!listarProjetos().includes(id)) {
         return json(res, { erro: `Projeto desconhecido: ${id}` }, 400);
       }
       try {
-        const endereco = await iniciarPreview(id);
+        const endereco = await iniciarPreview(id, modo === 'publico' ? 'publico' : 'interno');
         return json(res, { url: endereco });
       } catch (e) {
         return json(res, { erro: e.message }, e.status || 500);
+      }
+    }
+
+    // Liga/desliga a publicação de uma seção (hoje só a Arquitetura).
+    if (url.pathname === '/api/secao' && req.method === 'POST') {
+      const { id, secao, publicar } = await lerCorpo(req);
+      if (!listarProjetos().includes(id)) {
+        return json(res, { erro: `Projeto desconhecido: ${id}` }, 400);
+      }
+      try {
+        definirPublicacaoSecao(id, secao, publicar);
+        return json(res, { projetos: estadoDosProjetos() });
+      } catch (e) {
+        return json(res, { erro: e.message }, 400);
       }
     }
 
@@ -380,11 +407,12 @@ const servidor = createServer(async (req, res) => {
     if (url.pathname === '/api/executar') {
       const acao = url.searchParams.get('acao');
       const id = url.searchParams.get('projeto');
+      const modo = url.searchParams.get('modo') === 'publico' ? 'publico' : undefined;
       if (!ACOES[acao]) return json(res, { erro: `Ação desconhecida: ${acao}` }, 400);
       if (!listarProjetos().includes(id)) {
         return json(res, { erro: `Projeto desconhecido: ${id}` }, 400);
       }
-      return executarComStream(res, acao, id);
+      return executarComStream(res, acao, id, modo);
     }
 
     if (url.pathname.startsWith('/painel/')) {

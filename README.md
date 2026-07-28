@@ -100,8 +100,11 @@ daí é escrever os artigos em `docs/`.
 > as rotas do spec são chutes razoáveis, não os do seu projeto. Ajuste antes de
 > rodar os screenshots — é por isso que rotas e seletores não são compartilhados.
 
-O índice da Central de Ajuda nasce desligado (`indiceAjuda.gerar: false`): ele só
-faz sentido se o app do projeto tiver uma tela que consuma o `help-index.json`.
+Todo `publish` gera `public/docs/help-index.json` automaticamente. Se existir uma
+página chamada `perguntas-frequentes.md` ou `.mdx`, ela é localizada sem
+configuração adicional, com prioridade para a seção `referencia`. Quando houver
+mais de uma candidata, use `indiceAjuda.faqArquivo` no `projeto.json` para indicar
+explicitamente qual delas alimenta o FAQ.
 
 O `projeto.json` é validado no carregamento: campo faltando, `baseUrl` sem barra
 final ou seção sem pasta correspondente falham na hora, com o motivo.

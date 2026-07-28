@@ -95,15 +95,66 @@ function carregarProjeto(id) {
     arquivoTema: path.join(dir, 'tema.css'),
     arquivoEnv: path.join(dir, '.env'),
     dirBuild: path.join(RAIZ, 'build', id),
+    // Build da versão pública (sem as seções internas). Fica ao lado do build
+    // interno para os dois poderem coexistir — um por modo.
+    dirBuildCliente: path.join(RAIZ, 'build', `${id}-cliente`),
     dirScreenshots: path.join(dir, 'static', destinoScreenshots),
     // Sessão autenticada do Playwright, uma por produto.
     arquivoAuth: path.join(RAIZ, '.auth', `${id}.json`),
   };
 }
 
-/** Projeto indicado por DOC_PROJETO — usado pelos configs. */
+/**
+ * Aplica o modo de build a um projeto já carregado.
+ *
+ * No modo `publico`, as seções marcadas com `"publicar": false` no projeto.json
+ * (ex.: a Arquitetura, interna) são retiradas de `secoes` — o que já as remove da
+ * navbar, das sidebars e dos cards da home, pois tudo isso deriva daqui. As ações
+ * da home que apontam para uma seção retirada também caem, senão o link ficaria
+ * quebrado e o build (onBrokenLinks: 'throw') falharia. Os ids retirados voltam em
+ * `excluidas`, para o config excluir as páginas correspondentes do build.
+ *
+ * No modo `interno` (padrão) nada é filtrado: o time enxerga tudo localmente.
+ */
+function aplicarModo(projeto, modo = process.env.DOC_MODO) {
+  const secoes = projeto.secoes || [];
+  if (modo !== 'publico') {
+    return { ...projeto, excluidas: [] };
+  }
+
+  const excluidas = secoes.filter((s) => s.publicar === false).map((s) => s.id);
+  const escondidas = new Set(excluidas);
+  const secoesVisiveis = secoes.filter((s) => !escondidas.has(s.id));
+
+  const home = { ...(projeto.home || {}) };
+  for (const chave of ['acaoPrincipal', 'acaoSecundaria']) {
+    const acao = home[chave];
+    const destino = acao && String(acao.para).replace(/^\/+/, '').split('/')[0];
+    if (destino && escondidas.has(destino)) delete home[chave];
+  }
+
+  return { ...projeto, secoes: secoesVisiveis, home, excluidas };
+}
+
+/** Projeto indicado por DOC_PROJETO, já com o modo (DOC_MODO) aplicado. */
 function projetoAtivo() {
-  return carregarProjeto(process.env.DOC_PROJETO);
+  return aplicarModo(carregarProjeto(process.env.DOC_PROJETO));
+}
+
+/**
+ * Liga/desliga a publicação de uma seção no projeto.json (usado pelo painel).
+ * `publicar: true` é o padrão, então o campo só é gravado quando vira `false` —
+ * mantém o projeto.json enxuto e o comportamento anterior intacto.
+ */
+function definirPublicacaoSecao(id, secaoId, publicar) {
+  const arquivo = path.join(DIR_PROJETOS, id, 'projeto.json');
+  const dados = JSON.parse(fs.readFileSync(arquivo, 'utf8'));
+  const secao = (dados.secoes || []).find((s) => s.id === secaoId);
+  if (!secao) throw erro(`Seção "${secaoId}" não existe em ${id}.`);
+  if (publicar === false) secao.publicar = false;
+  else delete secao.publicar;
+  fs.writeFileSync(arquivo, `${JSON.stringify(dados, null, 2)}\n`);
+  return dados;
 }
 
 /** Caminhos de repositório desta máquina (não versionado). */
@@ -229,7 +280,9 @@ module.exports = {
   CAMINHOS_LOCAIS,
   listarProjetos,
   carregarProjeto,
+  aplicarModo,
   projetoAtivo,
+  definirPublicacaoSecao,
   lerCaminhosLocais,
   salvarCaminhoLocal,
   lerPastaBase,

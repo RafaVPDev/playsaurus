@@ -42,7 +42,7 @@
     font: 14.5px/1.6 var(--mono);
     letter-spacing: 0.2px;
   }
-  .container { max-width: 980px; margin: 0 auto; padding: 2rem 1.25rem 4rem; }
+  .container { max-width: 1180px; margin: 0 auto; padding: 2rem 1.25rem 4rem; }
 
   header h1 { font-size: 1.5rem; font-weight: 600; margin: 0 0 .35rem; letter-spacing: -.2px; }
   header h1::after { content: '_'; color: var(--accent); }
@@ -71,6 +71,10 @@
 
   .campo { display: flex; gap: .5rem; flex-wrap: wrap; align-items: center; }
   .campo label { font-size: .78rem; text-transform: uppercase; letter-spacing: .05em; color: var(--muted); font-weight: 700; width: 100%; }
+  .campo--check { margin-top: .9rem; }
+  .campo--check label { width: auto; text-transform: none; letter-spacing: normal; font-weight: 600; color: inherit; font-size: .9rem; order: 2; }
+  .campo--check input[type="checkbox"] { width: 1.05rem; height: 1.05rem; order: 1; accent-color: var(--accent); cursor: pointer; }
+  .campo--check .selo { order: 3; }
   input[type=text] {
     flex: 1 1 380px;
     min-width: 0;
@@ -746,12 +750,68 @@ function cartaoDoProjeto(p) {
       }));
     }
 
+    // A Arquitetura é interna: o check decide se ela vai para o site do cliente.
+    // Só aparece nos projetos que têm essa seção (arquiteturaPublicar !== null).
+    if (p.arquiteturaPublicar !== null) {
+      const chk = el('input', {
+        type: 'checkbox',
+        checked: p.arquiteturaPublicar,
+        id: `pub-arquitetura-${p.id}`,
+      });
+      chk.onchange = async () => {
+        chk.disabled = true;
+        try {
+          const r = await fetch('/api/secao', {
+            method: 'POST',
+            headers: { 'content-type': 'application/json' },
+            body: JSON.stringify({ id: p.id, secao: 'arquitetura', publicar: chk.checked }),
+          });
+          const dados = await r.json();
+          if (dados.erro) throw new Error(dados.erro);
+          desenhar(dados.projetos);
+        } catch (e) {
+          chk.disabled = false;
+          chk.checked = !chk.checked;
+          card.append(el('p', {
+            className: 'aviso aviso--erro',
+            textContent: `Não consegui salvar a opção: ${e.message}`,
+          }));
+        }
+      };
+      card.append(
+        el('div', { className: 'campo campo--check' }, [
+          chk,
+          el('label', {
+            htmlFor: `pub-arquitetura-${p.id}`,
+            textContent: 'Publicar a Arquitetura no site do cliente',
+          }),
+          el('span', {
+            className: `selo ${p.arquiteturaPublicar ? 'selo--ok' : 'selo--alerta'}`,
+            textContent: p.arquiteturaPublicar ? 'incluída' : 'só interna',
+          }),
+        ]),
+      );
+    }
+
     const acoes = el('div', { className: 'acoes' });
     const botoes = [
-      ['screenshots', 'Gerar screenshots', false, !p.temEnv],
-      ['build', 'Gerar build', false, false],
-      ['visualizar', 'Visualizar', false, !p.temBuild],
-      ['publicar', 'Publicar no repositório', true, !p.existe],
+      { acao: 'screenshots', rotulo: 'Gerar screenshots', bloqueado: !p.temEnv },
+      { acao: 'build', rotulo: 'Gerar build', bloqueado: false },
+      {
+        acao: 'visualizar-interno',
+        rotulo: 'Visualizar (interno)',
+        bloqueado: !p.temBuild,
+        onclick: () => visualizar(p.id, 'interno'),
+        title: !p.temBuild ? 'Gere o build antes de visualizar.' : '',
+      },
+      {
+        // Sempre gera a versão pública na hora e sobe o preview: reflete o check.
+        acao: 'visualizar-cliente',
+        rotulo: 'Visualizar (cliente)',
+        bloqueado: false,
+        onclick: () => visualizarCliente(p),
+      },
+      { acao: 'publicar', rotulo: 'Publicar no repositório', primario: true, bloqueado: !p.existe },
     ];
     const aguardandoSalvar = () => entrada.value !== caminhoConfirmado;
     const atualizarBloqueioDasAcoes = () => {
@@ -764,20 +824,19 @@ function cartaoDoProjeto(p) {
           b.dataset.aguardaSalvar === 'sim';
       }
     };
-    for (const [acao, rotulo, primario, bloqueado] of botoes) {
+    for (const item of botoes) {
+      const bloqueado = Boolean(item.bloqueado);
       const b = el('button', {
-        textContent: rotulo,
-        className: primario ? 'primario' : '',
+        textContent: item.rotulo,
+        className: item.primario ? 'primario' : '',
         disabled: bloqueado || aguardandoSalvar(),
       });
       b.dataset.acao = 'sim';
       b.dataset.bloqueado = bloqueado ? 'sim' : 'nao';
       b.dataset.aguardaSalvar = aguardandoSalvar() ? 'sim' : 'nao';
-      // "Visualizar" sobe um servidor persistente (não é ação one-shot por SSE).
-      b.onclick = acao === 'visualizar'
-        ? () => visualizar(p.id)
-        : () => executar(acao, p.id, `${rotulo} — ${p.nome}`);
-      if (acao === 'visualizar' && !p.temBuild) b.title = 'Gere o build antes de visualizar.';
+      // "Visualizar" sobe um servidor persistente; as demais são one-shot por SSE.
+      b.onclick = item.onclick ?? (() => executar(item.acao, p.id, `${item.rotulo} — ${p.nome}`));
+      if (item.title) b.title = item.title;
       acoes.append(b);
     }
     entrada.addEventListener('input', atualizarBloqueioDasAcoes);
@@ -847,7 +906,7 @@ function travarBotoes(travar) {
   }
 }
 
-function executar(acao, id, titulo) {
+function executar(acao, id, titulo, opcoes = {}) {
   if (rodando) return;
   rodando = true;
   travarBotoes(true);
@@ -859,7 +918,8 @@ function executar(acao, id, titulo) {
   $('#logSelo').hidden = true;
   $('#log').scrollIntoView({ behavior: 'smooth', block: 'nearest' });
 
-  const fonte = new EventSource(`/api/executar?acao=${encodeURIComponent(acao)}&projeto=${encodeURIComponent(id)}`);
+  const paramModo = opcoes.modo ? `&modo=${encodeURIComponent(opcoes.modo)}` : '';
+  const fonte = new EventSource(`/api/executar?acao=${encodeURIComponent(acao)}&projeto=${encodeURIComponent(id)}${paramModo}`);
 
   fonte.addEventListener('linha', (e) => {
     const pre = $('#logTexto');
@@ -878,6 +938,8 @@ function executar(acao, id, titulo) {
     fonte.close();
     rodando = false;
     carregar();
+    // Encadeamento (ex.: "Visualizar (cliente)" builda e depois sobe o preview).
+    if (typeof opcoes.aoConcluir === 'function') opcoes.aoConcluir(codigo);
   });
 
   fonte.onerror = () => {
@@ -894,15 +956,16 @@ function executar(acao, id, titulo) {
  * Sobe a pré-visualização da doc buildada e abre numa aba. Diferente das ações
  * one-shot, aqui o backend deixa um `docusaurus serve` no ar e devolve a URL.
  */
-async function visualizar(id) {
+async function visualizar(id, modo = 'interno', abaExistente = null) {
   // Abre a aba já no clique (gesto do usuário) para escapar do bloqueador de
-  // pop-up; a URL entra depois que o servidor sobe.
-  const aba = window.open('', '_blank');
+  // pop-up; a URL entra depois que o servidor sobe. No fluxo do cliente a aba já
+  // vem aberta desde o clique, antes do build assíncrono.
+  const aba = abaExistente ?? window.open('', '_blank');
   try {
     const r = await fetch('/api/visualizar', {
       method: 'POST',
       headers: { 'content-type': 'application/json' },
-      body: JSON.stringify({ id }),
+      body: JSON.stringify({ id, modo }),
     });
     const dados = await r.json();
     if (dados.erro) throw new Error(dados.erro);
@@ -919,6 +982,23 @@ async function visualizar(id) {
     selo.textContent = 'falhou';
     selo.className = 'selo selo--erro';
   }
+}
+
+/**
+ * "Visualizar (cliente)": gera a versão pública (sem as seções internas, como a
+ * Arquitetura quando desmarcada) e sobe a pré-visualização — assim o botão sempre
+ * mostra exatamente o que o cliente veria. A aba abre já no clique para escapar do
+ * bloqueador de pop-up; se o build falhar, ela é fechada.
+ */
+function visualizarCliente(p) {
+  const aba = window.open('', '_blank');
+  executar('build', p.id, `Gerar build (cliente) — ${p.nome}`, {
+    modo: 'publico',
+    aoConcluir: (codigo) => {
+      if (codigo === 0) visualizar(p.id, 'publico', aba);
+      else if (aba) aba.close();
+    },
+  });
 }
 
 /** Linha "pré-visualização no ar" com o link e o botão de parar. */
