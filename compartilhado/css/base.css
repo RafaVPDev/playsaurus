@@ -99,6 +99,21 @@
 .navbar-sidebar {
   background: var(--ifm-background-color);
 }
+.navbar-pdf-btn {
+  background: var(--doc-hero-btn-bg);
+  color: var(--doc-hero-btn-text) !important;
+  padding: 0.35rem 0.85rem;
+  border-radius: 6px;
+  font-weight: 600;
+  font-size: 0.875rem;
+  text-decoration: none !important;
+  transition: background-color 0.15s ease;
+  white-space: nowrap;
+}
+.navbar-pdf-btn:hover {
+  background: var(--doc-hero-btn-bg-hover);
+  color: var(--doc-hero-btn-text) !important;
+}
 
 /* ============================================================
    SIDEBAR (menu de documentos)

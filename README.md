@@ -42,16 +42,43 @@ id pode ser omitido.
 | `npm run screenshots -- meu-projeto` | Captura as telas do projeto (precisa do app rodando) |
 | `npm run videos -- meu-projeto` | Grava todos os roteiros em `static/videos/`, preservando as subpastas (precisa do app rodando) |
 | `npm run videos -- meu-projeto tutoriais-rapidos/central-ajuda.jornada.spec.ts` | Grava somente o roteiro informado |
-| `npm run publish -- meu-projeto` | Build + cópia para o repositório do projeto + índice da Ajuda |
+| `npm run pdf -- meu-projeto` | Exporta a documentação em PDF nas duas versões (cliente e equipe) e salva em `projetos/<id>/static/pdf/` |
+| `npm run publish -- meu-projeto` | Build público + cópia para o repositório do projeto + índice da Ajuda |
+
+## Dois modos de build
+
+Todo build existe em dois sabores, controlados pela variável `DOC_MODO`:
+
+| Modo | `DOC_MODO` | Saída | Conteúdo |
+|---|---|---|---|
+| **Interno** (padrão) | (omitido) | `build/<id>/` | Todas as seções |
+| **Público** (cliente) | `publico` | `build/<id>-cliente/` | Só as seções sem `"publicar": false` no `projeto.json` |
+
+`npm run publish` sempre usa o modo público. Os botões **Visualizar** no painel abrem cada um no seu modo. Os botões **Gerar build** e **Iniciar servidor** usam o modo interno.
+
+### PDFs exportados
+
+`npm run pdf -- <id>` gera os dois PDFs em `projetos/<id>/static/pdf/`:
+
+- `documentacao-cliente.pdf` — versão pública, sem seções internas
+- `documentacao-equipe.pdf` — versão completa, com tudo
+
+Por ficarem em `static/`, os PDFs são copiados junto com o build e ficam acessíveis no site. A documentação exibe um botão **⬇ Baixar PDF** na navbar que aponta automaticamente para o PDF correto de acordo com o modo de build.
+
+**Anti-vazamento:** `publish` remove `documentacao-equipe.pdf` do build público antes de copiá-lo para o repositório do produto. O PDF interno nunca chega ao cliente.
+
+> Execute `npm run pdf` sempre que o conteúdo mudar, antes de publicar. Enquanto o
+> arquivo não existir, o botão da navbar resulta em 404.
 
 ## Estrutura
 
 ```
 compartilhado/     tema base, componentes, BasePage e overlays de vídeo (cursor + legenda), projeto.cjs
 projetos/<id>/     artigos, marca, screenshots, specs, projeto.json
-scripts/           build, publicação, índice da Ajuda, painel
+scripts/           build, publicação, PDF, índice da Ajuda, painel
 painel/            a página do painel
-build/<id>/        saída do build (não versionada)
+build/<id>/        saída do build interno (não versionada)
+build/<id>-cliente/ saída do build público (não versionada)
 ```
 
 **Compartilhado:** a instalação, o CSS estrutural, a homepage, os utilitários de
@@ -138,6 +165,15 @@ painel. O que se compartilha é a ferramenta (`compartilhado/`,
 > Consequência: a fonte da documentação de cada projeto vive só na máquina de
 > quem a mantém e no build publicado em `public/docs`. Faça backup do que
 > escrever — aqui o git não segura por você.
+
+## Playwright — duas configs separadas
+
+| Config | Usada por | Roda |
+|---|---|---|
+| `playwright.config.ts` | `npm run screenshots` | `*.spec.ts` exceto `*.jornada.spec.ts` e `_debug.spec.ts` |
+| `playwright.video.config.ts` | `npm run videos` | Só `*.jornada.spec.ts` |
+
+As configs são intencionalmente separadas: gravar vídeo deixa cada spec 2–3× mais lento. `screenshots` ignora os roteiros de jornada via `testIgnore`; `videos` faz o inverso com `testMatch`. Misturar os dois torna o `npm run screenshots` desnecessariamente lento.
 
 ## Armadilhas conhecidas
 

@@ -52,6 +52,7 @@ const ACOES = {
   build: { script: 'build.mjs', titulo: 'Gerando build' },
   publicar: { script: 'publicar.mjs', titulo: 'Publicando' },
   videos: { script: 'videos.mjs', titulo: 'Gravando vídeos' },
+  'exportar-pdf': { script: 'exportar-pdf.mjs', titulo: 'Exportando PDF' },
 };
 
 let emExecucao = null;

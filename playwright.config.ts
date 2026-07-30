@@ -14,19 +14,27 @@ const projeto = projetoAtivo();
 dotenv.config({ path: projeto.arquivoEnv });
 
 const envBaseUrl = projeto.screenshots?.envBaseUrl;
+const baseUrlBruto =
+  (envBaseUrl && process.env[envBaseUrl]) || projeto.screenshots?.baseUrlPadrao || 'http://localhost:8080';
+// Só o origin: uma baseURL com caminho (ex.: ".../login") quebraria o goto('/login').
+const baseURL = (() => {
+  try {
+    return new URL(baseUrlBruto).origin;
+  } catch {
+    return baseUrlBruto;
+  }
+})();
 
 export default defineConfig({
   testDir: projeto.dirPlaywright,
+  testIgnore: [/jornada\.spec\.ts/, /_debug\.spec\.ts/],
   fullyParallel: false,
   forbidOnly: !!process.env.CI,
   retries: process.env.CI ? 1 : 0,
   workers: 1,
   reporter: 'list',
   use: {
-    baseURL:
-      (envBaseUrl && process.env[envBaseUrl]) ||
-      projeto.screenshots?.baseUrlPadrao ||
-      'http://localhost:8080',
+    baseURL,
     trace: 'on-first-retry',
     viewport: { width: 1440, height: 900 },
     ignoreHTTPSErrors: true,

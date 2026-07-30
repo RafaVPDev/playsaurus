@@ -20,6 +20,17 @@ const projeto = projetoAtivo();
 dotenv.config({ path: projeto.arquivoEnv });
 
 const envBaseUrl = projeto.screenshots?.envBaseUrl;
+const baseUrlBruto =
+  (envBaseUrl && process.env[envBaseUrl]) || projeto.screenshots?.baseUrlPadrao || 'http://localhost:8080';
+// Só o origin: uma baseURL com caminho (ex.: ".../login" colado por engano)
+// quebraria o goto('/login'). Mantém esquema+host+porta.
+const baseURL = (() => {
+  try {
+    return new URL(baseUrlBruto).origin;
+  } catch {
+    return baseUrlBruto;
+  }
+})();
 // Mesmo tamanho dos screenshots (1440×900): telas menores cortavam a tabela de
 // projetos e escondiam o botão "Novo Projeto".
 const VIEWPORT = { width: 1440, height: 900 };
@@ -33,10 +44,7 @@ export default defineConfig({
   workers: 1,
   reporter: 'list',
   use: {
-    baseURL:
-      (envBaseUrl && process.env[envBaseUrl]) ||
-      projeto.screenshots?.baseUrlPadrao ||
-      'http://localhost:8080',
+    baseURL,
     ignoreHTTPSErrors: true,
     locale: 'pt-BR',
   },

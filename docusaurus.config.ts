@@ -17,6 +17,9 @@ type Secao = {id: string; rotulo: string};
  */
 const projeto = projetoAtivo();
 
+const modoPdf = process.env.DOC_MODO === 'publico' ? 'cliente' : 'equipe';
+const urlPdf = `${projeto.baseUrl}pdf/documentacao-${modoPdf}.pdf`;
+
 const config: Config = {
   title: projeto.nome,
   tagline: projeto.tagline ?? '',
@@ -102,6 +105,7 @@ const config: Config = {
       logo: projeto.logo ?? null,
       secoes: projeto.secoes,
       home: projeto.home ?? {},
+      urlPdf,
     },
   },
 
@@ -119,12 +123,19 @@ const config: Config = {
       ...(projeto.logo
         ? {logo: {alt: projeto.nome, src: projeto.logo, srcDark: projeto.logoEscuro ?? projeto.logo}}
         : {}),
-      items: (projeto.secoes as Secao[]).map((secao) => ({
-        type: 'docSidebar' as const,
-        sidebarId: `${secao.id}Sidebar`,
-        position: 'left' as const,
-        label: secao.rotulo,
-      })),
+      items: [
+        ...(projeto.secoes as Secao[]).map((secao) => ({
+          type: 'docSidebar' as const,
+          sidebarId: `${secao.id}Sidebar`,
+          position: 'left' as const,
+          label: secao.rotulo,
+        })),
+        {
+          type: 'html' as const,
+          position: 'right' as const,
+          value: `<a class="navbar-pdf-btn" href="${urlPdf}" download>⬇ Baixar PDF</a>`,
+        },
+      ],
     },
     footer: {
       style: 'dark',

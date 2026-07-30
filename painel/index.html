@@ -813,6 +813,7 @@ function cartaoDoProjeto(p) {
         bloqueado: false,
         onclick: () => visualizarCliente(p),
       },
+      { acao: 'exportar-pdf', rotulo: 'Exportar PDF', bloqueado: false },
       { acao: 'publicar', rotulo: 'Publicar no repositório', primario: true, bloqueado: !p.existe },
     ];
     const aguardandoSalvar = () => entrada.value !== caminhoConfirmado;

@@ -59,6 +59,15 @@ try {
     throw new Error(`Build público não encontrado em ${path.relative(RAIZ, projeto.dirBuildCliente)} depois de gerar.`);
   }
 
+  // O PDF de equipe (static/pdf/documentacao-equipe.pdf) é copiado pelo Docusaurus
+  // junto do static, mesmo no build público. Remove antes de publicar para a
+  // versão interna nunca chegar ao cliente.
+  const pdfEquipe = path.join(projeto.dirBuildCliente, 'pdf', 'documentacao-equipe.pdf');
+  if (existsSync(pdfEquipe)) {
+    await rm(pdfEquipe, { force: true });
+    console.log('Removido do build público: pdf/documentacao-equipe.pdf (interno).');
+  }
+
   // Limpa a versão anterior para não deixar arquivos órfãos de builds antigos.
   console.log(`\nSubstituindo ${path.relative(repositorio, destino)}...`);
   await rm(destino, { recursive: true, force: true });
