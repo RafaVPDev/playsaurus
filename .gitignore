@@ -27,6 +27,10 @@
 /blob-report/
 /playwright/.cache/
 
+# Credenciais locais — nunca versionar
+.env
+projetos/**/.env
+
 # Misc
 .DS_Store
 npm-debug.log*

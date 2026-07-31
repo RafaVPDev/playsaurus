@@ -33,6 +33,7 @@ const {
   lerPastaBase,
   salvarPastaBase,
   definirPublicacaoSecao,
+  salvarUrlPublica,
 } = require('../compartilhado/projeto.cjs');
 const {
   SECOES_PADRAO,
@@ -185,6 +186,7 @@ function estadoDosProjetos() {
         tagline: projeto.tagline ?? '',
         baseUrl: projeto.baseUrl,
         url: projeto.url,
+        urlPublica: projeto.urlPublica ?? null,
         secoes: projeto.secoes.map((s) => s.rotulo),
         arquiteturaPublicar: arquitetura ? arquitetura.publicar !== false : null,
         destino: projeto.repositorio?.destino ?? 'public/docs',
@@ -421,6 +423,19 @@ const servidor = createServer(async (req, res) => {
       }
       try {
         definirPublicacaoSecao(id, secao, publicar);
+        return json(res, { projetos: estadoDosProjetos() });
+      } catch (e) {
+        return json(res, { erro: e.message }, 400);
+      }
+    }
+
+    if (url.pathname === '/api/url-publica' && req.method === 'POST') {
+      const { id, urlPublica } = await lerCorpo(req);
+      if (!listarProjetos().includes(id)) {
+        return json(res, { erro: `Projeto desconhecido: ${id}` }, 400);
+      }
+      try {
+        salvarUrlPublica(id, (urlPublica ?? '').trim() || null);
         return json(res, { projetos: estadoDosProjetos() });
       } catch (e) {
         return json(res, { erro: e.message }, 400);

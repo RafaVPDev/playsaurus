@@ -133,12 +133,28 @@ function aplicarModo(projeto, modo = process.env.DOC_MODO) {
     if (destino && escondidas.has(destino)) delete home[chave];
   }
 
-  return { ...projeto, secoes: secoesVisiveis, home, excluidas };
+  // No modo público, a URL pública substitui a URL de desenvolvimento (localhost).
+  const url = projeto.urlPublica || projeto.url;
+
+  return { ...projeto, url, secoes: secoesVisiveis, home, excluidas };
 }
 
 /** Projeto indicado por DOC_PROJETO, já com o modo (DOC_MODO) aplicado. */
 function projetoAtivo() {
   return aplicarModo(carregarProjeto(process.env.DOC_PROJETO));
+}
+
+/**
+ * Salva a URL pública do projeto (usada no build público em vez de `url`).
+ * Passar null remove o campo e faz o build usar `url` normalmente.
+ */
+function salvarUrlPublica(id, urlPublica) {
+  const arquivo = path.join(DIR_PROJETOS, id, 'projeto.json');
+  const dados = JSON.parse(fs.readFileSync(arquivo, 'utf8'));
+  if (urlPublica) dados.urlPublica = urlPublica;
+  else delete dados.urlPublica;
+  fs.writeFileSync(arquivo, `${JSON.stringify(dados, null, 2)}\n`);
+  return dados;
 }
 
 /**
@@ -283,6 +299,7 @@ module.exports = {
   aplicarModo,
   projetoAtivo,
   definirPublicacaoSecao,
+  salvarUrlPublica,
   lerCaminhosLocais,
   salvarCaminhoLocal,
   lerPastaBase,

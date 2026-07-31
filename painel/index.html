@@ -116,6 +116,8 @@
   .aviso--alerta { color: var(--alerta); }
 
   .acoes { display: flex; gap: .5rem; flex-wrap: wrap; margin-top: 1.1rem; padding-top: 1.1rem; border-top: 1px solid var(--border); }
+  /* Os botões de ação crescem para ocupar a linha inteira, sem o vão à direita. */
+  .acoes > button { flex: 1 1 auto; }
   button {
     font: inherit;
     font-size: .84rem;
@@ -368,6 +370,47 @@
     color: var(--erro);
   }
   .perigo:hover:not(:disabled) { background: rgba(242, 86, 92, .12); border-color: var(--erro); }
+
+  /* Linha divisória entre blocos de um mesmo card. */
+  .divisor { border: 0; border-top: 1px solid var(--border); margin: 1.1rem 0; }
+
+  /* --- Modal de confirmação --- */
+  .modal-fundo {
+    position: fixed;
+    inset: 0;
+    z-index: 50;
+    display: grid;
+    place-items: center;
+    padding: 1.25rem;
+    background: rgba(0, 0, 0, .58);
+    backdrop-filter: blur(2px);
+  }
+  .modal-fundo[hidden] { display: none; }
+  .modal {
+    width: 100%;
+    max-width: 440px;
+    background: var(--surface);
+    border: 1px solid var(--border-forte);
+    border-radius: 14px;
+    padding: 1.4rem 1.5rem 1.25rem;
+    box-shadow: 0 24px 60px rgba(0, 0, 0, .5);
+  }
+  .modal h3 { margin: 0 0 .6rem; font-size: 1.1rem; font-weight: 700; }
+  .modal p { margin: 0 0 .9rem; color: var(--muted); font-size: .88rem; }
+  .modal__url {
+    display: block;
+    padding: .6rem .75rem;
+    margin: 0 0 .5rem;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    background: var(--surface-2);
+    color: var(--accent);
+    font-size: .9rem;
+    word-break: break-all;
+  }
+  .modal__url--local { color: var(--alerta); border-color: rgba(232, 179, 60, .4); }
+  .modal__aviso { color: var(--alerta); font-size: .82rem; margin: 0 0 1rem; }
+  .modal__acoes { display: flex; gap: .5rem; justify-content: flex-end; margin-top: 1.1rem; }
 </style>
 </head>
 <body>
@@ -478,6 +521,21 @@
   <p class="vazio rodape">
     O painel funciona enquanto a janela do console estiver aberta — fechá-la desliga o servidor.
   </p>
+</div>
+
+<div class="modal-fundo" id="modalPublicar" hidden>
+  <div class="modal" role="dialog" aria-modal="true" aria-labelledby="modalPublicarTitulo">
+    <h3 id="modalPublicarTitulo">Publicar no repositório</h3>
+    <p>A documentação será gerada e copiada usando a URL abaixo (sitemap, links canônicos):</p>
+    <code class="modal__url" id="modalPublicarUrl"></code>
+    <p class="modal__aviso" id="modalPublicarAviso" hidden>
+      ⚠ Esta é uma URL local. O site publicado ficaria com endereços apontando para a sua máquina.
+    </p>
+    <div class="modal__acoes">
+      <button class="discreto" id="modalPublicarCancelar">Cancelar</button>
+      <button class="primario" id="modalPublicarConfirmar">Confirmar e publicar</button>
+    </div>
+  </div>
 </div>
 
 <script>
@@ -721,6 +779,9 @@ function cartaoDoProjeto(p) {
       }
     };
 
+    // Divisória entre o cabeçalho (nome/URL/seções) e as configurações do repositório.
+    card.append(el('hr', { className: 'divisor' }));
+
     card.append(
       el('div', { className: 'campo' }, [
         el('label', { textContent: `Repositório do projeto (a doc vai para ${p.destino})` }),
@@ -795,6 +856,56 @@ function cartaoDoProjeto(p) {
       );
     }
 
+    // Divisória entre o bloco da Arquitetura/repositório e a URL pública.
+    card.append(el('hr', { className: 'divisor' }));
+
+    // Campo URL pública — override do projeto.url no build público.
+    const urlAtual = p.urlPublica || p.url || '';
+    const entradaUrl = el('input', {
+      type: 'text',
+      value: urlAtual,
+      placeholder: 'https://meu-produto.com',
+      spellcheck: false,
+    });
+    const salvarUrl = el('button', { textContent: 'Salvar' });
+    salvarUrl.onclick = async () => {
+      salvarUrl.disabled = true;
+      try {
+        const r = await fetch('/api/url-publica', {
+          method: 'POST',
+          headers: { 'content-type': 'application/json' },
+          body: JSON.stringify({ id: p.id, urlPublica: entradaUrl.value.trim() }),
+        });
+        const dados = await r.json();
+        if (dados.erro) throw new Error(dados.erro);
+        desenhar(dados.projetos);
+      } catch (e) {
+        salvarUrl.disabled = false;
+        card.append(el('p', {
+          className: 'aviso aviso--erro',
+          textContent: `Não consegui salvar a URL: ${e.message}`,
+        }));
+      }
+    };
+    const urlEhLocal = /localhost|127\.0\.0\.1/.test(urlAtual);
+    card.append(
+      el('div', { className: 'campo' }, [
+        el('label', { textContent: 'URL pública (usada ao publicar no repositório)' }),
+        entradaUrl,
+        el('span', {
+          className: `selo ${urlEhLocal ? 'selo--alerta' : 'selo--ok'}`,
+          textContent: urlEhLocal ? 'local' : 'ok',
+        }),
+        salvarUrl,
+      ]),
+    );
+    if (urlEhLocal) {
+      card.append(el('p', {
+        className: 'aviso aviso--alerta',
+        textContent: 'A URL ainda aponta para localhost. Atualize antes de publicar.',
+      }));
+    }
+
     const acoes = el('div', { className: 'acoes' });
     const botoes = [
       { acao: 'screenshots', rotulo: 'Gerar screenshots', bloqueado: !p.temEnv },
@@ -814,7 +925,16 @@ function cartaoDoProjeto(p) {
         onclick: () => visualizarCliente(p),
       },
       { acao: 'exportar-pdf', rotulo: 'Exportar PDF', bloqueado: false },
-      { acao: 'publicar', rotulo: 'Publicar no repositório', primario: true, bloqueado: !p.existe },
+      {
+        acao: 'publicar',
+        rotulo: 'Publicar no repositório',
+        primario: true,
+        bloqueado: !p.existe,
+        onclick: () => {
+          if (rodando) return;
+          abrirModalPublicar(p);
+        },
+      },
     ];
     const aguardandoSalvar = () => entrada.value !== caminhoConfirmado;
     const atualizarBloqueioDasAcoes = () => {
@@ -844,8 +964,11 @@ function cartaoDoProjeto(p) {
       acoes.append(b);
     }
     entrada.addEventListener('input', atualizarBloqueioDasAcoes);
-    card.append(acoes);
+    // Vídeo acima dos botões, separado por linha; os botões trazem a própria
+    // borda superior, então a linha fica entre o campo de vídeo e as ações.
+    card.append(el('hr', { className: 'divisor' }));
     card.append(linhaVideo(p, aguardandoSalvar));
+    card.append(acoes);
     if (previewAtivo && previewAtivo.id === p.id) card.append(linhaPreview(previewAtivo.url));
     card.append(rodapeExcluir(p));
     return card;
@@ -982,6 +1105,42 @@ function rodapeExcluir(p) {
   linha.append(abrir);
   return linha;
 }
+
+/**
+ * Modal de confirmação da publicação: mostra a URL que será usada e destaca
+ * quando ela ainda é local, evitando publicar o site apontando para localhost.
+ */
+function abrirModalPublicar(p) {
+  const urlEfetiva = p.urlPublica || p.url;
+  const ehLocal = /localhost|127\.0\.0\.1/.test(urlEfetiva);
+
+  const campoUrl = $('#modalPublicarUrl');
+  campoUrl.textContent = urlEfetiva;
+  campoUrl.classList.toggle('modal__url--local', ehLocal);
+  $('#modalPublicarAviso').hidden = !ehLocal;
+
+  const confirmar = $('#modalPublicarConfirmar');
+  confirmar.onclick = () => {
+    fecharModalPublicar();
+    executar('publicar', p.id, `Publicar no repositório — ${p.nome}`);
+  };
+
+  $('#modalPublicar').hidden = false;
+  confirmar.focus();
+}
+
+function fecharModalPublicar() {
+  $('#modalPublicar').hidden = true;
+}
+
+$('#modalPublicarCancelar').onclick = fecharModalPublicar;
+// Clicar no fundo (fora do modal) ou apertar Esc fecha sem publicar.
+$('#modalPublicar').addEventListener('click', (e) => {
+  if (e.target === $('#modalPublicar')) fecharModalPublicar();
+});
+document.addEventListener('keydown', (e) => {
+  if (e.key === 'Escape' && !$('#modalPublicar').hidden) fecharModalPublicar();
+});
 
 function travarBotoes(travar) {
   for (const b of document.querySelectorAll('button[data-acao]')) {
